@@ -6,29 +6,17 @@
   <title>Vharum</title>
 
   <style>
-    body {
-      margin: 0;
-      background: black;
-      overflow: hidden;
-    }
-
-    canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-    }
-
-    #msg {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      padding: 10px;
+    body { margin: 0; background: black; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    #msg{
+      position: fixed; top: 10px; left: 10px; right: 10px;
+      padding: 10px 12px;
       background: rgba(0,0,0,.6);
       color: white;
       font-family: system-ui;
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,.2);
+      z-index: 10;
     }
   </style>
 </head>
@@ -40,12 +28,14 @@
 <script>
 (async () => {
 
-  // ✅ TU RUTA REAL
+  // ✅ Tu ruta correcta
   const BASE = "https://raw.githubusercontent.com/kariciber/Vharum/main/assets/";
 
+  // ✅ Solo archivos que EXISTEN en tu repo
   const FILES = {
-    bg: BASE + "pasillooscuro.png",
-    player: BASE + "jugadorsombra.png"
+    bgDark:  BASE + "pasillooscuro.png",
+    bgLight: BASE + "pasilloluz.png",
+    player:  BASE + "jugadorsombra.png"
   };
 
   const msg = document.getElementById("msg");
@@ -53,10 +43,12 @@
   const ctx = canvas.getContext("2d");
 
   function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // nitidez en móvil
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-
   window.addEventListener("resize", resize);
   resize();
 
@@ -70,63 +62,102 @@
     });
   }
 
-  let bg, player;
+  let bgDark, bgLight, player;
 
   try {
-    bg = await load(FILES.bg);
-    player = await load(FILES.player);
-    msg.textContent = "Listo ✅ (usa WASD / Flechas)";
+    [bgDark, bgLight, player] = await Promise.all([
+      load(FILES.bgDark),
+      load(FILES.bgLight),
+      load(FILES.player)
+    ]);
+    msg.textContent = "Listo ✅ (WASD / Flechas)";
   } catch (badUrl) {
     console.error("Error cargando:", badUrl);
-    msg.textContent = "Error cargando imagen ❌ Mira consola";
+    msg.textContent = "Error cargando imagen ❌ Revisa nombre/ruta";
     return;
   }
 
+  // Control
   const keys = {};
   window.addEventListener("keydown", e => keys[e.key] = true);
   window.addEventListener("keyup", e => keys[e.key] = false);
 
-  let x = canvas.width * 0.3;
-  let y = canvas.height * 0.8;
-  const speed = 3;
+  // Posición inicial (más centrado para móvil)
+  let x = window.innerWidth * 0.5;
+  let y = window.innerHeight * 0.88;
 
-  function drawBackground() {
-    const scale = Math.max(
-      canvas.width / bg.width,
-      canvas.height / bg.height
-    );
+  const speed = 3.2;
 
-    const w = bg.width * scale;
-    const h = bg.height * scale;
+  // Parpadeo
+  let useLight = false;
+  let nextFlicker = performance.now() + 900;
 
-    ctx.drawImage(bg,
-      (canvas.width - w) / 2,
-      (canvas.height - h) / 2,
-      w,
-      h
-    );
+  function scheduleFlicker(now){
+    nextFlicker = now + (700 + Math.random() * 1800);
   }
 
-  function loop() {
+  function updateFlicker(now){
+    if (now < nextFlicker) return;
+    useLight = !useLight;
 
-    if (keys["ArrowLeft"] || keys["a"]) x -= speed;
-    if (keys["ArrowRight"] || keys["d"]) x += speed;
-    if (keys["ArrowUp"] || keys["w"]) y -= speed;
-    if (keys["ArrowDown"] || keys["s"]) y += speed;
+    // flash corto cuando se enciende
+    if (useLight) nextFlicker = now + (80 + Math.random() * 220);
+    else scheduleFlicker(now);
+  }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  function drawBackground(img) {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
 
-    drawBackground();
+    const scale = Math.max(w / img.width, h / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
 
-    const pw = canvas.width * 0.12;
-    const ph = canvas.height * 0.22;
+    ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+  }
 
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  function loop(now) {
+    updateFlicker(now);
+
+    if (keys["ArrowLeft"] || keys["a"] || keys["A"]) x -= speed;
+    if (keys["ArrowRight"] || keys["d"] || keys["D"]) x += speed;
+    if (keys["ArrowUp"] || keys["w"] || keys["W"]) y -= speed;
+    if (keys["ArrowDown"] || keys["s"] || keys["S"]) y += speed;
+
+    // límites
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    x = clamp(x, w * 0.05, w * 0.95);
+    y = clamp(y, h * 0.45, h * 0.95);
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Fondo con parpadeo
+    drawBackground(useLight ? bgLight : bgDark);
+
+    // Jugador MÁS GRANDE
+    const pw = w * 0.18;
+    const ph = h * 0.34;
+
+    // Sombra debajo
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.ellipse(x, y, pw * 0.30, ph * 0.08, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Dibujar jugador
     ctx.drawImage(player, x - pw/2, y - ph, pw, ph);
 
     requestAnimationFrame(loop);
   }
 
-  loop();
+  scheduleFlicker(performance.now());
+  requestAnimationFrame(loop);
 
 })();
 </script>
