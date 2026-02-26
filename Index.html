@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>VHARUM - Demo</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #0b0b0f;
+      color: #eaeaf2;
+      overflow: hidden;
+    }
+    #wrap {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 8px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .pill {
+      padding: 6px 10px;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    #stage {
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 14px;
+      background: #12121a;
+      overflow: hidden;
+      box-shadow: 0 10px 35px rgba(0,0,0,0.35);
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+    #msg {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      right: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.45);
+      font-size: 14px;
+      line-height: 1.35;
+      display: none;
+    }
+    footer {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.08);
+      color: #eaeaf2;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: translateY(1px); }
+
+    /* Controles táctiles */
+    #touch {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      width: 100%;
+      align-items: center;
+    }
+    .dpad {
+      display: grid;
+      grid-template-columns: 52px 52px 52px;
+      grid-template-rows: 52px 52px 52px;
+      gap: 8px;
+      justify-content: start;
+      align-items: center;
+    }
+    .dpad .btn { width: 52px; height: 52px; padding: 0; border-radius: 16px; }
+    .dpad .empty { visibility: hidden; }
+    .actions { display: flex; gap: 10px; justify-content: end; }
+    .muted { opacity: 0.8; font-size: 12px; }
+
+    @media (min-width: 900px) {
+      #wrap { padding: 14px; }
+      #touch { max-width: 900px; margin: 0 auto; }
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <header>
+      <div class="pill" id="sceneName">Escena: pasillo</div>
+      <div class="pill" id="status">Cargando imágenes…</div>
+    </header>
+
+    <div id="stage">
+      <canvas id="c"></canvas>
+      <div id="msg"></div>
+    </div>
+
+    <footer>
+      <div class="muted">
+        Teclado: WASD / Flechas. Interactuar: E. (En móvil: botones)
+      </div>
+
+      <div id="touch">
+        <div class="dpad" aria-label="Controles">
+          <div class="empty btn"></div>
+          <button class="btn" data-hold="up">↑</button>
+          <div class="empty btn"></div>
+
+          <button class="btn" data-hold="left">←</button>
+          <button class="btn" data-hold="down">↓</button>
+          <button class="btn" data-hold="right">→</button>
+
+          <div class="empty btn"></div>
+          <div class="empty btn"></div>
+          <div class="empty btn"></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="btnInteract">E · Interactuar</button>
+          <button class="btn" id="btnReload">Recargar</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+<script>
+(() => {
+  // =========================
+  // CONFIG: CAMBIA SOLO ESTO
+  // =========================
+  const BASE_URL = "https://raw.githubusercontent.com/kariciber/VHARUM/main/";
+
+  // Nombres de tus archivos (deben existir en GitHub EXACTOS)
+  const ASSETS = {
+    bg_pasillo: "pasillooscuro.png",
+    puerta:     "puerta.png",
+    player:     "jugadorsombra.png",
+  };
+
+  // =========================
+  // UTILIDADES
+  // =========================
+  const $ = (sel) => document.querySelector(sel);
+  const canvas = $("#c");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  const statusEl = $("#status");
+  const sceneNameEl = $("#sceneName");
+  const msgEl = $("#msg");
+
+  function showMsg(text) {
+    msgEl.textContent = text;
+    msgEl.style.display = "block";
+  }
+  function hideMsg() {
+    msgEl.style.display = "none";
+  }
+
+  function fitCanvas() {
+    const stage = $("#stage");
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const w = stage.clientWidth;
+    const h = stage.clientHeight;
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener("resize", fitCanvas);
+
+  async function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("No se pudo cargar: " + url));
+      img.src = url;
+    });
+  }
+
+  async function preload() {
+    const urls = Object.fromEntries(
+      Object.entries(ASSETS).map(([k, file]) => [k, BASE_URL + file])
+    );
+
+    const loaded = {};
+    const entries = Object.entries(urls);
+
+    for (let i = 0; i < entries.length; i++) {
+      const [key, url] = entries[i];
+      statusEl.textContent = `Cargando (${i+1}/${entries.length})…`;
+      loaded[key] = await loadImage(url);
+    }
+
+    statusEl.textContent = "Listo ✅";
+    return loaded;
+  }
+
+  // =========================
+  // ESCENAS (muy simple)
+  // =========================
+  const SCENES = {
+    pasillo: {
+      name: "pasillo",
+      bgKey: "bg_pasillo",
+      doorHotspot: { x: 0.78, y: 0.52, w: 0.12, h: 0.30 }, // zona donde está la puerta (relativo)
+      next: "puerta",
+    },
+    puerta: {
+      name: "puerta",
+      bgKey: "puerta",
+      doorHotspot: { x: 0.05, y: 0.55, w: 0.15, h: 0.30 }, // para volver
+      next: "pasillo",
+    },
+  };
+
+  // =========================
+  // ESTADO DEL JUEGO
+  // =========================
+  let images = null;
+  let scene = SCENES.pasillo;
+
+  const player = {
+    x: 0.25,
+    y: 0.72,
+    speed: 0.006, // relativo al ancho/alto (ajusta si quieres)
+  };
+
+  const keys = { up:false, down:false, left:false, right:false };
+
+  function setScene(name) {
+    scene = SCENES[name];
+    sceneNameEl.textContent = `Escena: ${scene.name}`;
+    hideMsg();
+  }
+
+  function playerRect(w, h) {
+    // tamaño relativo del jugador
+    const pw = w * 0.12;
+    const ph = h * 0.22;
+    return {
+      x: player.x * w - pw/2,
+      y: player.y * h - ph,
+      w: pw,
+      h: ph,
+    };
+  }
+
+  function hotspotRect(hs, w, h) {
+    return {
+      x: hs.x * w,
+      y: hs.y * h,
+      w: hs.w * w,
+      h: hs.h * h,
+    };
+  }
+
+  function intersects(a, b) {
+    return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h);
+  }
+
+  function interact() {
+    const stageW = $("#stage").clientWidth;
+    const stageH = $("#stage").clientHeight;
+    const p = playerRect(stageW, stageH);
+    const hs = hotspotRect(scene.doorHotspot, stageW, stageH);
+
+    if (intersects(p, hs)) {
+      setScene(scene.next);
+    } else {
+      showMsg("No hay nada para usar aquí. Acércate a la puerta y pulsa E.");
+      setTimeout(() => hideMsg(), 1600);
+    }
+  }
+
+  // =========================
+  // INPUT (teclado)
+  // =========================
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") keys.up = true;
+    if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") keys.down = true;
+    if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keys.left = true;
+    if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") keys.right = true;
+    if (e.key.toLowerCase() === "e") interact();
+  });
+  window.addEventListener("keyup", (e) => {
+    if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") keys.up = false;
+    if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") keys.down = false;
+    if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keys.left = false;
+    if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") keys.right = false;
+  });
+
+  // =========================
+  // INPUT (táctil: mantener pulsado)
+  // =========================
+  function bindHold(btn, dir) {
+    const start = (ev) => { ev.preventDefault(); keys[dir] = true; };
+    const end   = (ev) => { ev.preventDefault(); keys[dir] = false; };
+
+    btn.addEventListener("pointerdown", start);
+    btn.addEventListener("pointerup", end);
+    btn.addEventListener("pointercancel", end);
+    btn.addEventListener("pointerleave", end);
+  }
+
+  document.querySelectorAll("[data-hold]").forEach(btn => {
+    bindHold(btn, btn.getAttribute("data-hold"));
+  });
+
+  $("#btnInteract").addEventListener("click", interact);
+  $("#btnReload").addEventListener("click", () => location.reload());
+
+  // =========================
+  // RENDER
+  // =========================
+  let last = performance.now();
+
+  function draw() {
+    const stage = $("#stage");
+    const w = stage.clientWidth;
+    const h = stage.clientHeight;
+
+    // fondo
+    const bg = images[scene.bgKey];
+    ctx.clearRect(0, 0, w, h);
+
+    // dibujar fondo "cover"
+    const scale = Math.max(w / bg.width, h / bg.height);
+    const bw = bg.width * scale;
+    const bh = bg.height * scale;
+    const bx = (w - bw) / 2;
+    const by = (h - bh) / 2;
+    ctx.drawImage(bg, bx, by, bw, bh);
+
+    // hotspot (debug suave)
+    const hs = hotspotRect(scene.doorHotspot, w, h);
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(hs.x, hs.y, hs.w, hs.h);
+    ctx.restore();
+
+    // jugador (imagen)
+    const pr = playerRect(w, h);
+    const pl = images.player;
+
+    // sombra simple debajo (queda muy bien con "jugadorsombra.png")
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.ellipse(pr.x + pr.w/2, pr.y + pr.h * 0.95, pr.w * 0.28, pr.h * 0.08, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.drawImage(pl, pr.x, pr.y, pr.w, pr.h);
+
+    // hint
+    const p = pr;
+    if (intersects(p, hs)) {
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.fillRect(12, h - 54, 260, 40);
+      ctx.fillStyle = "#fff";
+      ctx.font = "600 14px system-ui";
+      ctx.fillText("Pulsa E para usar la puerta", 24, h - 28);
+      ctx.restore();
+    }
+  }
+
+  function update(dt) {
+    // movimiento relativo, suavito
+    const vx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    const vy = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+
+    // normaliza
+    const mag = Math.hypot(vx, vy) || 1;
+    const nx = vx / mag;
+    const ny = vy / mag;
+
+    player.x += nx * player.speed * dt;
+    player.y += ny * player.speed * dt;
+
+    // límites
+    player.x = Math.max(0.08, Math.min(0.92, player.x));
+    player.y = Math.max(0.35, Math.min(0.92, player.y));
+  }
+
+  function loop(now) {
+    const dt = Math.min(32, now - last);
+    last = now;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(loop);
+  }
+
+  // =========================
+  // INICIO
+  // =========================
+  async function start() {
+    try {
+      fitCanvas();
+      statusEl.textContent = "Cargando imágenes…";
+
+      images = await preload();
+      setScene("pasillo");
+
+      requestAnimationFrame(loop);
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Error ❌";
+      showMsg(
+        "No se han podido cargar las imágenes.\n" +
+        "Asegúrate de que la URL sea RAW y que los nombres de archivo coincidan.\n\n" +
+        "Ejemplo correcto:\n" +
+        BASE_URL + ASSETS.bg_pasillo
+      );
+    }
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>
