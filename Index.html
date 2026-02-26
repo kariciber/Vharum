@@ -10,37 +10,19 @@
     canvas { display:block; width:100vw; height:100vh; }
 
     #ui { position: fixed; left: 10px; top: 10px; right: 10px; display:flex; gap:10px; flex-wrap:wrap; z-index:10; }
-    .pill {
-      padding:8px 10px; border-radius:999px;
-      border:1px solid rgba(255,255,255,.15);
-      background:rgba(255,255,255,.06);
-      color:#f2f2ff; font-size:13px;
-      backdrop-filter: blur(6px);
-    }
+    .pill { padding:8px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.15);
+      background:rgba(255,255,255,.06); color:#f2f2ff; font-size:13px; backdrop-filter: blur(6px); }
 
-    #msg {
-      position: fixed; left:10px; right:10px; top:58px;
-      padding:10px 12px; border-radius:14px;
-      border:1px solid rgba(255,255,255,.15);
-      background:rgba(0,0,0,.55);
-      color:#fff; font-size:14px; line-height:1.35;
-      z-index:10; display:none; white-space:pre-line;
-    }
+    #msg { position: fixed; left:10px; right:10px; top:58px; padding:10px 12px; border-radius:14px;
+      border:1px solid rgba(255,255,255,.15); background:rgba(0,0,0,.55); color:#fff; font-size:14px;
+      line-height:1.35; z-index:10; display:none; white-space:pre-line; }
 
-    #touch {
-      position: fixed; left: 10px; right: 10px; bottom: 10px;
-      display:grid; grid-template-columns:auto 1fr; gap:12px;
-      z-index:10; pointer-events:none;
-    }
+    #touch { position: fixed; left: 10px; right: 10px; bottom: 10px; display:grid; grid-template-columns:auto 1fr; gap:12px;
+      z-index:10; pointer-events:none; }
     .dpad,.actions{ pointer-events:auto; }
     .dpad{ display:grid; grid-template-columns:56px 56px 56px; grid-template-rows:56px 56px 56px; gap:10px; }
-    .btn{
-      width:56px; height:56px; border-radius:16px;
-      border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.08);
-      color:#fff; font-weight:800; font-size:16px;
-      user-select:none; -webkit-tap-highlight-color: transparent;
-    }
+    .btn{ width:56px; height:56px; border-radius:16px; border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.08); color:#fff; font-weight:800; font-size:16px; user-select:none; -webkit-tap-highlight-color: transparent; }
     .btn:active{ transform: translateY(1px); }
     .empty{ visibility:hidden; }
     .actions{ display:flex; gap:10px; align-items:end; justify-content:end; }
@@ -72,7 +54,6 @@
       <div class="empty btn"></div>
       <div class="empty btn"></div>
     </div>
-
     <div class="actions">
       <button class="btn wide" id="btnE">E · Interactuar</button>
       <button class="btn wide" id="btnReload">Recargar</button>
@@ -81,19 +62,22 @@
 
 <script>
 (() => {
-  // ✅ BASE correcta para tu repo y carpeta /assets/
+  // =========================================================
+  // CONFIG (GitHub RAW) - TU REPO
+  // =========================================================
   const BASE = "https://raw.githubusercontent.com/kariciber/Vharum/main/assets/";
 
-  // ✅ Tus nombres EXACTOS
+  // ⬇️ Cambia aquí cuando me digas los nombres exactos
   const FILES = {
     pasillo_oscuro: "pasillooscuro.png",
-    pasillo_luz: "pasilloluz.png",
-    tres_oscuro: "trespuertasoscuras.png",
-    tres_luz: "trespuertasluz.png",
-    player: "jugadorsombra.png"
+    pasillo_luz:    "pasilloluz.png",     // (si no existe aún, no rompe)
+    tres_puertas:   "3puertas.png",       // (si no existe aún, no rompe)
+    player:         "jugadorsombra.png",
   };
 
-  // UI
+  // =========================================================
+  // UI helpers
+  // =========================================================
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
   const scenePill = document.getElementById("scenePill");
@@ -104,10 +88,12 @@
   function showMsg(text, ms=1600){
     msgBox.textContent = text;
     msgBox.style.display = "block";
-    if (ms) setTimeout(() => msgBox.style.display = "none", ms);
+    if (ms) setTimeout(() => msgBox.style.display="none", ms);
   }
 
-  // Canvas resize nítido
+  // =========================================================
+  // Canvas sizing
+  // =========================================================
   function resize(){
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     canvas.width = Math.floor(innerWidth * dpr);
@@ -117,7 +103,9 @@
   addEventListener("resize", resize);
   resize();
 
-  // Loader
+  // =========================================================
+  // Asset loader
+  // =========================================================
   function loadImage(url){
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -131,83 +119,103 @@
   async function preload(){
     const out = {};
     const entries = Object.entries(FILES);
+
     for (let i=0; i<entries.length; i++){
-      const [k, file] = entries[i];
-      const url = BASE + file;
+      const [k, filename] = entries[i];
+      const url = BASE + filename;
       statusPill.textContent = `Cargando ${i+1}/${entries.length}…`;
-      out[k] = await loadImage(url);
+
+      // Permitimos que algunos falles sin romper
+      const optional = (k === "pasillo_luz" || k === "tres_puertas");
+      try {
+        out[k] = await loadImage(url);
+      } catch (e) {
+        if (!optional) throw e;
+        out[k] = null;
+      }
     }
+
     statusPill.textContent = "Listo ✅";
     return out;
   }
 
-  // Scenes (pasillo ↔ tres puertas)
+  // =========================================================
+  // Scenes
+  // =========================================================
   const SCENES = {
     pasillo: {
       name: "pasillo",
-      // en pasillo usaremos parpadeo entre oscuro y luz
+      bgKey: "pasillo_oscuro",
       door: { x: 0.78, y: 0.52, w: 0.14, h: 0.32 },
-      next: "tres"
+      next: "tres_puertas"
     },
-    tres: {
+    tres_puertas: {
       name: "tres puertas",
-      // parpadeo entre tres_oscuro y tres_luz
+      bgKey: "tres_puertas",   // si no existe, fallback al pasillo
       door: { x: 0.06, y: 0.55, w: 0.16, h: 0.30 },
       next: "pasillo"
     }
   };
 
   let images = null;
-  let sceneKey = "pasillo";
+  let currentScene = SCENES.pasillo;
 
-  function setScene(k){
-    sceneKey = k;
-    scenePill.textContent = "Escena: " + SCENES[k].name;
-    showMsg("Entraste en: " + SCENES[k].name, 900);
-    scheduleFlicker(performance.now());
+  function setScene(key){
+    currentScene = SCENES[key];
+    scenePill.textContent = "Escena: " + currentScene.name;
   }
 
-  // Flicker (parpadeo)
-  let flickerOn = false;
+  // =========================================================
+  // Flicker (parpadeo) - pasillo oscuro ↔ luz
+  // =========================================================
+  let flickerOn = false;       // si está usando la versión con luz
   let nextFlickerAt = 0;
 
   function scheduleFlicker(now){
-    // Base irregular
-    nextFlickerAt = now + (700 + Math.random() * 1800);
-    flickerOn = false;
+    // parpadeo irregular: a veces tarda más, a veces menos
+    const base = 700 + Math.random() * 1800;     // 0.7s a 2.5s
+    const burst = Math.random() < 0.25 ? (120 + Math.random()*220) : 0; // mini parpadeo rápido a veces
+    nextFlickerAt = now + base + burst;
   }
 
   function updateFlicker(now){
-    if (now < nextFlickerAt) return;
+    if (currentScene !== SCENES.pasillo) return;            // solo en pasillo
+    if (!images.pasillo_luz) return;                        // si no hay imagen de luz, no hay parpadeo
 
-    // alterna con flashes cortos
-    flickerOn = !flickerOn;
+    if (now >= nextFlickerAt) {
+      // alterna
+      flickerOn = !flickerOn;
 
-    if (flickerOn) {
-      nextFlickerAt = now + (80 + Math.random() * 220);     // luz breve
-    } else {
-      nextFlickerAt = now + (700 + Math.random() * 1800);   // pausa
+      // cuando se enciende, suele durar menos (flash)
+      if (flickerOn) nextFlickerAt = now + (80 + Math.random()*220);
+      else scheduleFlicker(now);
     }
   }
 
-  // Player (más grande)
-  const player = { x: 0.28, y: 0.82, speed: 0.007 };
+  // =========================================================
+  // Player state
+  // =========================================================
+  const player = { x: 0.28, y: 0.82, speed: 0.0065 };
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
   function playerRect(w,h){
-    // 👇 AUMENTADO para que no se vea chiquito
-    const pw = w * 0.17;
-    const ph = h * 0.32;
+    const pw = w * 0.12;
+    const ph = h * 0.22;
     return { x: player.x*w - pw/2, y: player.y*h - ph, w: pw, h: ph };
   }
-  function doorRect(w,h){
-    const d = SCENES[sceneKey].door;
+
+  function doorRect(scene,w,h){
+    const d = scene.door;
     return { x: d.x*w, y: d.y*h, w: d.w*w, h: d.h*h };
   }
+
   function intersects(a,b){
     return !(a.x+a.w < b.x || a.x > b.x+b.w || a.y+a.h < b.y || a.y > b.y+b.h);
   }
 
+  // =========================================================
   // Input
+  // =========================================================
   const keys = { up:false, down:false, left:false, right:false };
 
   addEventListener("keydown", (e) => {
@@ -240,18 +248,25 @@
   document.getElementById("btnE").addEventListener("click", interact);
   document.getElementById("btnReload").addEventListener("click", () => location.reload());
 
+  // =========================================================
+  // Interaction
+  // =========================================================
   function interact(){
     const w = innerWidth, h = innerHeight;
     const pr = playerRect(w,h);
-    const dr = doorRect(w,h);
+    const dr = doorRect(currentScene, w,h);
+
     if (intersects(pr, dr)) {
-      setScene(SCENES[sceneKey].next);
+      setScene(currentScene.next);
+      showMsg("Cambio de escena ✅", 900);
     } else {
       showMsg("Acércate a la puerta y pulsa E 🙂", 1200);
     }
   }
 
-  // Render helpers
+  // =========================================================
+  // Render
+  // =========================================================
   function drawCover(img, w, h){
     const s = Math.max(w / img.width, h / img.height);
     const dw = img.width * s;
@@ -277,17 +292,17 @@
     const w = innerWidth, h = innerHeight;
     ctx.clearRect(0,0,w,h);
 
-    // Fondo según escena + parpadeo
-    let bg;
-    if (sceneKey === "pasillo") {
+    // Fondo con fallback + parpadeo en pasillo
+    let bg = images[currentScene.bgKey];
+    if (currentScene === SCENES.pasillo) {
       bg = flickerOn ? images.pasillo_luz : images.pasillo_oscuro;
-    } else {
-      bg = flickerOn ? images.tres_luz : images.tres_oscuro;
+      if (!bg) bg = images.pasillo_oscuro; // por si falla
     }
+    if (!bg) bg = images.pasillo_oscuro;
     drawCover(bg, w, h);
 
-    // Puerta hotspot (debug suave)
-    const dr = doorRect(w,h);
+    // Zona puerta (debug suave)
+    const dr = doorRect(currentScene, w, h);
     ctx.save();
     ctx.globalAlpha = 0.10;
     ctx.fillStyle = "#ffffff";
@@ -296,7 +311,6 @@
 
     // Jugador
     const pr = playerRect(w,h);
-
     ctx.save();
     ctx.globalAlpha = 0.28;
     ctx.fillStyle = "#000";
@@ -323,11 +337,14 @@
     requestAnimationFrame(loop);
   }
 
+  // =========================================================
   // Start
+  // =========================================================
   (async function start(){
     try{
       images = await preload();
       setScene("pasillo");
+      scheduleFlicker(performance.now());
       requestAnimationFrame(loop);
     } catch (err){
       console.error(err);
