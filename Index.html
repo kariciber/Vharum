@@ -7,26 +7,83 @@
   <style>
     :root { color-scheme: dark; }
     body { margin:0; background:#05050a; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    #ui {
+      position: fixed; left: 10px; top: 10px; right: 10px;
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      z-index: 10;
+    }
+    .pill {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.06);
+      color: #f2f2ff;
+      font-size: 13px;
+      backdrop-filter: blur(6px);
+    }
+    #msg {
+      position: fixed;
+      left: 10px; right: 10px; top: 58px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(0,0,0,.55);
+      color: #fff;
+      font-size: 14px;
+      line-height: 1.35;
+      z-index: 10;
+      display: none;
+      white-space: pre-line;
+    }
     canvas { display:block; width:100vw; height:100vh; }
 
-    #ui { position: fixed; left: 10px; top: 10px; right: 10px; display:flex; gap:10px; flex-wrap:wrap; z-index:10; }
-    .pill { padding:8px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.15);
-      background:rgba(255,255,255,.06); color:#f2f2ff; font-size:13px; backdrop-filter: blur(6px); }
+    /* Controles táctiles */
+    #touch {
+      position: fixed;
+      left: 10px; right: 10px; bottom: 10px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      z-index: 10;
+      pointer-events: none; /* dejamos que solo botones reciban */
+    }
+    .dpad, .actions { pointer-events: auto; }
+    .dpad {
+      display: grid;
+      grid-template-columns: 56px 56px 56px;
+      grid-template-rows: 56px 56px 56px;
+      gap: 10px;
+      align-items: center;
+      justify-items: center;
+    }
+    .btn {
+      width: 56px; height: 56px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      font-weight: 700;
+      font-size: 16px;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: translateY(1px); }
+    .empty { visibility: hidden; }
+    .actions {
+      display: flex; gap: 10px;
+      align-items: end;
+      justify-content: end;
+    }
+    .wide {
+      width: auto; height: 56px;
+      padding: 0 14px;
+      border-radius: 16px;
+    }
 
-    #msg { position: fixed; left:10px; right:10px; top:58px; padding:10px 12px; border-radius:14px;
-      border:1px solid rgba(255,255,255,.15); background:rgba(0,0,0,.55); color:#fff; font-size:14px;
-      line-height:1.35; z-index:10; display:none; white-space:pre-line; }
-
-    #touch { position: fixed; left: 10px; right: 10px; bottom: 10px; display:grid; grid-template-columns:auto 1fr; gap:12px;
-      z-index:10; pointer-events:none; }
-    .dpad,.actions{ pointer-events:auto; }
-    .dpad{ display:grid; grid-template-columns:56px 56px 56px; grid-template-rows:56px 56px 56px; gap:10px; }
-    .btn{ width:56px; height:56px; border-radius:16px; border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.08); color:#fff; font-weight:800; font-size:16px; user-select:none; -webkit-tap-highlight-color: transparent; }
-    .btn:active{ transform: translateY(1px); }
-    .empty{ visibility:hidden; }
-    .actions{ display:flex; gap:10px; align-items:end; justify-content:end; }
-    .wide{ width:auto; padding:0 14px; }
+    /* En pantallas grandes, los controles no molestan */
+    @media (min-width: 900px){
+      #touch { left: 14px; right: 14px; bottom: 14px; }
+    }
   </style>
 </head>
 <body>
@@ -40,7 +97,7 @@
   <div id="msg"></div>
   <canvas id="c"></canvas>
 
-  <div id="touch">
+  <div id="touch" aria-label="Controles táctiles">
     <div class="dpad">
       <div class="empty btn"></div>
       <button class="btn" data-hold="up">↑</button>
@@ -54,6 +111,7 @@
       <div class="empty btn"></div>
       <div class="empty btn"></div>
     </div>
+
     <div class="actions">
       <button class="btn wide" id="btnE">E · Interactuar</button>
       <button class="btn wide" id="btnReload">Recargar</button>
@@ -63,20 +121,19 @@
 <script>
 (() => {
   // =========================================================
-  // CONFIG (GitHub RAW) - TU REPO
+  // CONFIG (GitHub RAW) - TU REPO REAL
   // =========================================================
   const BASE = "https://raw.githubusercontent.com/kariciber/Vharum/main/assets/";
 
-  // ⬇️ Cambia aquí cuando me digas los nombres exactos
+  // Pon aquí los nombres EXACTOS (mayúsculas cuentan)
   const FILES = {
-    pasillo_oscuro: "pasillooscuro.png",
-    pasillo_luz:    "pasilloluz.png",     // (si no existe aún, no rompe)
-    tres_puertas:   "3puertas.png",       // (si no existe aún, no rompe)
-    player:         "jugadorsombra.png",
+    pasillo: "pasillooscuro.png",
+    puerta: "puerta.png",          // si no existe, la escena "puerta" usará el pasillo
+    player: "jugadorsombra.png",
   };
 
   // =========================================================
-  // UI helpers
+  // UI
   // =========================================================
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
@@ -85,14 +142,14 @@
   const hintPill = document.getElementById("hintPill");
   const msgBox = document.getElementById("msg");
 
-  function showMsg(text, ms=1600){
+  function showMsg(text, ms=1800){
     msgBox.textContent = text;
     msgBox.style.display = "block";
     if (ms) setTimeout(() => msgBox.style.display="none", ms);
   }
 
   // =========================================================
-  // Canvas sizing
+  // Canvas sizing (nítido)
   // =========================================================
   function resize(){
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -124,34 +181,29 @@
       const [k, filename] = entries[i];
       const url = BASE + filename;
       statusPill.textContent = `Cargando ${i+1}/${entries.length}…`;
-
-      // Permitimos que algunos falles sin romper
-      const optional = (k === "pasillo_luz" || k === "tres_puertas");
-      try {
-        out[k] = await loadImage(url);
-      } catch (e) {
-        if (!optional) throw e;
-        out[k] = null;
-      }
+      out[k] = await loadImage(url).catch(err => {
+        // Permitimos que "puerta" falle (si no la tienes aún)
+        if (k === "puerta") return null;
+        throw err;
+      });
     }
-
     statusPill.textContent = "Listo ✅";
     return out;
   }
 
   // =========================================================
-  // Scenes
+  // Scenes (muy simple)
   // =========================================================
   const SCENES = {
     pasillo: {
       name: "pasillo",
-      bgKey: "pasillo_oscuro",
+      bgKey: "pasillo",
       door: { x: 0.78, y: 0.52, w: 0.14, h: 0.32 },
-      next: "tres_puertas"
+      next: "puerta"
     },
-    tres_puertas: {
-      name: "tres puertas",
-      bgKey: "tres_puertas",   // si no existe, fallback al pasillo
+    puerta: {
+      name: "puerta",
+      bgKey: "puerta",   // si no existe, haremos fallback
       door: { x: 0.06, y: 0.55, w: 0.16, h: 0.30 },
       next: "pasillo"
     }
@@ -163,58 +215,37 @@
   function setScene(key){
     currentScene = SCENES[key];
     scenePill.textContent = "Escena: " + currentScene.name;
-  }
-
-  // =========================================================
-  // Flicker (parpadeo) - pasillo oscuro ↔ luz
-  // =========================================================
-  let flickerOn = false;       // si está usando la versión con luz
-  let nextFlickerAt = 0;
-
-  function scheduleFlicker(now){
-    // parpadeo irregular: a veces tarda más, a veces menos
-    const base = 700 + Math.random() * 1800;     // 0.7s a 2.5s
-    const burst = Math.random() < 0.25 ? (120 + Math.random()*220) : 0; // mini parpadeo rápido a veces
-    nextFlickerAt = now + base + burst;
-  }
-
-  function updateFlicker(now){
-    if (currentScene !== SCENES.pasillo) return;            // solo en pasillo
-    if (!images.pasillo_luz) return;                        // si no hay imagen de luz, no hay parpadeo
-
-    if (now >= nextFlickerAt) {
-      // alterna
-      flickerOn = !flickerOn;
-
-      // cuando se enciende, suele durar menos (flash)
-      if (flickerOn) nextFlickerAt = now + (80 + Math.random()*220);
-      else scheduleFlicker(now);
-    }
+    showMsg(`Has entrado en: ${currentScene.name}`, 900);
   }
 
   // =========================================================
   // Player state
   // =========================================================
-  const player = { x: 0.28, y: 0.82, speed: 0.0065 };
-  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  const player = {
+    x: 0.28,  // relativo (0..1)
+    y: 0.82,
+    speed: 0.0065
+  };
 
-  function playerRect(w,h){
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function playerRect(w, h){
     const pw = w * 0.12;
     const ph = h * 0.22;
     return { x: player.x*w - pw/2, y: player.y*h - ph, w: pw, h: ph };
   }
 
-  function doorRect(scene,w,h){
+  function doorRect(scene, w, h){
     const d = scene.door;
     return { x: d.x*w, y: d.y*h, w: d.w*w, h: d.h*h };
   }
 
-  function intersects(a,b){
+  function intersects(a, b){
     return !(a.x+a.w < b.x || a.x > b.x+b.w || a.y+a.h < b.y || a.y > b.y+b.h);
   }
 
   // =========================================================
-  // Input
+  // Input (keyboard + touch hold)
   // =========================================================
   const keys = { up:false, down:false, left:false, right:false };
 
@@ -249,23 +280,22 @@
   document.getElementById("btnReload").addEventListener("click", () => location.reload());
 
   // =========================================================
-  // Interaction
+  // Interaction (door)
   // =========================================================
   function interact(){
     const w = innerWidth, h = innerHeight;
-    const pr = playerRect(w,h);
-    const dr = doorRect(currentScene, w,h);
+    const pr = playerRect(w, h);
+    const dr = doorRect(currentScene, w, h);
 
     if (intersects(pr, dr)) {
       setScene(currentScene.next);
-      showMsg("Cambio de escena ✅", 900);
     } else {
       showMsg("Acércate a la puerta y pulsa E 🙂", 1200);
     }
   }
 
   // =========================================================
-  // Render
+  // Rendering helpers
   // =========================================================
   function drawCover(img, w, h){
     const s = Math.max(w / img.width, h / img.height);
@@ -274,6 +304,9 @@
     ctx.drawImage(img, (w - dw)/2, (h - dh)/2, dw, dh);
   }
 
+  // =========================================================
+  // Main loop
+  // =========================================================
   let last = performance.now();
 
   function update(dt){
@@ -288,29 +321,27 @@
     player.y = clamp(player.y, 0.40, 0.92);
   }
 
-  function draw(now){
+  function draw(){
     const w = innerWidth, h = innerHeight;
-    ctx.clearRect(0,0,w,h);
+    ctx.clearRect(0, 0, w, h);
 
-    // Fondo con fallback + parpadeo en pasillo
+    // background with fallback
     let bg = images[currentScene.bgKey];
-    if (currentScene === SCENES.pasillo) {
-      bg = flickerOn ? images.pasillo_luz : images.pasillo_oscuro;
-      if (!bg) bg = images.pasillo_oscuro; // por si falla
-    }
-    if (!bg) bg = images.pasillo_oscuro;
+    if (!bg) bg = images.pasillo; // si "puerta.png" no existe aún
     drawCover(bg, w, h);
 
-    // Zona puerta (debug suave)
+    // door hotspot (debug suave)
     const dr = doorRect(currentScene, w, h);
     ctx.save();
-    ctx.globalAlpha = 0.10;
+    ctx.globalAlpha = 0.12;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(dr.x, dr.y, dr.w, dr.h);
     ctx.restore();
 
-    // Jugador
-    const pr = playerRect(w,h);
+    // player
+    const pr = playerRect(w, h);
+
+    // sombra simple
     ctx.save();
     ctx.globalAlpha = 0.28;
     ctx.fillStyle = "#000";
@@ -321,19 +352,19 @@
 
     ctx.drawImage(images.player, pr.x, pr.y, pr.w, pr.h);
 
-    // Hint
-    if (intersects(pr, dr)) hintPill.textContent = "Cerca de puerta: pulsa E";
-    else hintPill.textContent = "WASD/Flechas · E interactuar";
+    // hint si está cerca de puerta
+    if (intersects(pr, dr)) {
+      hintPill.textContent = "Cerca de puerta: pulsa E";
+    } else {
+      hintPill.textContent = "WASD/Flechas · E interactuar";
+    }
   }
 
   function loop(now){
     const dt = Math.min(32, now - last);
     last = now;
-
     update(dt);
-    updateFlicker(now);
-    draw(now);
-
+    draw();
     requestAnimationFrame(loop);
   }
 
@@ -341,17 +372,16 @@
   // Start
   // =========================================================
   (async function start(){
-    try{
+    try {
       images = await preload();
       setScene("pasillo");
-      scheduleFlicker(performance.now());
       requestAnimationFrame(loop);
-    } catch (err){
+    } catch (err) {
       console.error(err);
       statusPill.textContent = "Error ❌";
       showMsg(
         "No se han podido cargar las imágenes.\n" +
-        "Revisa nombres EXACTOS en /assets/.\n\n" +
+        "Revisa nombres EXACTOS y que estén en /assets/.\n\n" +
         "Ejemplo:\n" + BASE + FILES.player,
         0
       );
