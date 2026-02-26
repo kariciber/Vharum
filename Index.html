@@ -35,8 +35,7 @@
     .dpad,.actions{ pointer-events:auto; }
     .dpad{ display:grid; grid-template-columns:56px 56px 56px; grid-template-rows:56px 56px 56px; gap:10px; }
     .btn{
-      width:56px; height:56px;
-      border-radius:16px;
+      width:56px; height:56px; border-radius:16px;
       border:1px solid rgba(255,255,255,.16);
       background:rgba(255,255,255,.08);
       color:#fff; font-weight:800; font-size:16px;
@@ -46,12 +45,6 @@
     .empty{ visibility:hidden; }
     .actions{ display:flex; gap:10px; align-items:end; justify-content:end; }
     .wide{ width:auto; padding:0 14px; }
-
-    @media (min-width: 900px){
-      #touch { left: 14px; right: 14px; bottom: 14px; }
-      #ui { left: 14px; right: 14px; top: 14px; }
-      #msg { left: 14px; right: 14px; top: 62px; }
-    }
   </style>
 </head>
 <body>
@@ -65,7 +58,7 @@
   <div id="msg"></div>
   <canvas id="c"></canvas>
 
-  <div id="touch" aria-label="Controles táctiles">
+  <div id="touch">
     <div class="dpad">
       <div class="empty btn"></div>
       <button class="btn" data-hold="up">↑</button>
@@ -88,28 +81,19 @@
 
 <script>
 (() => {
-  // =========================================================
-  // CONFIG (GitHub RAW) - TU REPO /assets/
-  // =========================================================
+  // ✅ BASE correcta para tu repo y carpeta /assets/
   const BASE = "https://raw.githubusercontent.com/kariciber/Vharum/main/assets/";
 
-  // Nombres EXACTOS (tal cual tu captura)
+  // ✅ Tus nombres EXACTOS
   const FILES = {
     pasillo_oscuro: "pasillooscuro.png",
     pasillo_luz: "pasilloluz.png",
-    tres_puertas_oscuro: "trespuertasoscuras.png",
-    tres_puertas_luz: "trespuertasluz.png",
-    player: "jugadorsombra.png",
-
-    // opcionales (por si luego los usas)
-    puerta: "puerta.png",
-    puertalateralsola: "puertalateralsola.png",
-    pasillopuertalateralderechaoscura: "pasillopuertalateralderechaoscura.png"
+    tres_oscuro: "trespuertasoscuras.png",
+    tres_luz: "trespuertasluz.png",
+    player: "jugadorsombra.png"
   };
 
-  // =========================================================
   // UI
-  // =========================================================
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
   const scenePill = document.getElementById("scenePill");
@@ -120,12 +104,10 @@
   function showMsg(text, ms=1600){
     msgBox.textContent = text;
     msgBox.style.display = "block";
-    if (ms) setTimeout(() => msgBox.style.display="none", ms);
+    if (ms) setTimeout(() => msgBox.style.display = "none", ms);
   }
 
-  // =========================================================
-  // Canvas sizing
-  // =========================================================
+  // Canvas resize nítido
   function resize(){
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     canvas.width = Math.floor(innerWidth * dpr);
@@ -135,9 +117,7 @@
   addEventListener("resize", resize);
   resize();
 
-  // =========================================================
-  // Asset loader
-  // =========================================================
+  // Loader
   function loadImage(url){
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -151,113 +131,83 @@
   async function preload(){
     const out = {};
     const entries = Object.entries(FILES);
-
     for (let i=0; i<entries.length; i++){
-      const [k, filename] = entries[i];
-      const url = BASE + filename;
+      const [k, file] = entries[i];
+      const url = BASE + file;
       statusPill.textContent = `Cargando ${i+1}/${entries.length}…`;
-
-      // Permitimos que los opcionales fallen sin romper
-      const optional = (k === "puerta" || k === "puertalateralsola" || k === "pasillopuertalateralderechaoscura");
-      try {
-        out[k] = await loadImage(url);
-      } catch (e) {
-        if (!optional) throw e;
-        out[k] = null;
-      }
+      out[k] = await loadImage(url);
     }
-
     statusPill.textContent = "Listo ✅";
     return out;
   }
 
-  // =========================================================
-  // Scenes (2 escenas)
-  // =========================================================
+  // Scenes (pasillo ↔ tres puertas)
   const SCENES = {
     pasillo: {
-      key: "pasillo",
       name: "pasillo",
-      bgDark: "pasillo_oscuro",
-      bgLight: "pasillo_luz",
+      // en pasillo usaremos parpadeo entre oscuro y luz
       door: { x: 0.78, y: 0.52, w: 0.14, h: 0.32 },
-      next: "tres_puertas"
+      next: "tres"
     },
-    tres_puertas: {
-      key: "tres_puertas",
+    tres: {
       name: "tres puertas",
-      bgDark: "tres_puertas_oscuro",
-      bgLight: "tres_puertas_luz",
+      // parpadeo entre tres_oscuro y tres_luz
       door: { x: 0.06, y: 0.55, w: 0.16, h: 0.30 },
       next: "pasillo"
     }
   };
 
   let images = null;
-  let scene = SCENES.pasillo;
+  let sceneKey = "pasillo";
 
-  function setScene(key){
-    scene = SCENES[key];
-    scenePill.textContent = "Escena: " + scene.name;
-    showMsg("Escena: " + scene.name, 900);
+  function setScene(k){
+    sceneKey = k;
+    scenePill.textContent = "Escena: " + SCENES[k].name;
+    showMsg("Entraste en: " + SCENES[k].name, 900);
+    scheduleFlicker(performance.now());
   }
 
-  // =========================================================
   // Flicker (parpadeo)
-  // =========================================================
   let flickerOn = false;
   let nextFlickerAt = 0;
 
   function scheduleFlicker(now){
-    // luz irregular: base + a veces un mini-burst
-    const base = 700 + Math.random() * 1900;  // 0.7s a 2.6s
-    const burst = Math.random() < 0.22 ? (120 + Math.random()*220) : 0;
-    nextFlickerAt = now + base + burst;
+    // Base irregular
+    nextFlickerAt = now + (700 + Math.random() * 1800);
+    flickerOn = false;
   }
 
   function updateFlicker(now){
-    // Si no hay imagen de luz, no parpadea
-    const hasLight = images[scene.bgLight];
-    if (!hasLight) return;
+    if (now < nextFlickerAt) return;
 
-    if (now >= nextFlickerAt) {
-      flickerOn = !flickerOn;
+    // alterna con flashes cortos
+    flickerOn = !flickerOn;
 
-      // cuando se enciende, dura poco (flash)
-      if (flickerOn) {
-        nextFlickerAt = now + (90 + Math.random()*240);
-      } else {
-        scheduleFlicker(now);
-      }
+    if (flickerOn) {
+      nextFlickerAt = now + (80 + Math.random() * 220);     // luz breve
+    } else {
+      nextFlickerAt = now + (700 + Math.random() * 1800);   // pausa
     }
   }
 
-  // =========================================================
-  // Player
-  // =========================================================
-  const player = { x: 0.28, y: 0.82, speed: 0.0065 };
-
+  // Player (más grande)
+  const player = { x: 0.28, y: 0.82, speed: 0.007 };
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-
   function playerRect(w,h){
-    // 🎯 aquí ajustas tamaño del jugador
-    const pw = w * 0.16;   // antes 0.12 (ahora más grande)
-    const ph = h * 0.30;   // antes 0.22
+    // 👇 AUMENTADO para que no se vea chiquito
+    const pw = w * 0.17;
+    const ph = h * 0.32;
     return { x: player.x*w - pw/2, y: player.y*h - ph, w: pw, h: ph };
   }
-
-  function doorRect(scene,w,h){
-    const d = scene.door;
+  function doorRect(w,h){
+    const d = SCENES[sceneKey].door;
     return { x: d.x*w, y: d.y*h, w: d.w*w, h: d.h*h };
   }
-
   function intersects(a,b){
     return !(a.x+a.w < b.x || a.x > b.x+b.w || a.y+a.h < b.y || a.y > b.y+b.h);
   }
 
-  // =========================================================
-  // Input (keyboard + touch hold)
-  // =========================================================
+  // Input
   const keys = { up:false, down:false, left:false, right:false };
 
   addEventListener("keydown", (e) => {
@@ -290,24 +240,18 @@
   document.getElementById("btnE").addEventListener("click", interact);
   document.getElementById("btnReload").addEventListener("click", () => location.reload());
 
-  // =========================================================
-  // Interaction
-  // =========================================================
   function interact(){
     const w = innerWidth, h = innerHeight;
     const pr = playerRect(w,h);
-    const dr = doorRect(scene, w,h);
-
+    const dr = doorRect(w,h);
     if (intersects(pr, dr)) {
-      setScene(scene.next);
+      setScene(SCENES[sceneKey].next);
     } else {
       showMsg("Acércate a la puerta y pulsa E 🙂", 1200);
     }
   }
 
-  // =========================================================
   // Render helpers
-  // =========================================================
   function drawCover(img, w, h){
     const s = Math.max(w / img.width, h / img.height);
     const dw = img.width * s;
@@ -315,9 +259,6 @@
     ctx.drawImage(img, (w - dw)/2, (h - dh)/2, dw, dh);
   }
 
-  // =========================================================
-  // Loop
-  // =========================================================
   let last = performance.now();
 
   function update(dt){
@@ -332,27 +273,30 @@
     player.y = clamp(player.y, 0.40, 0.92);
   }
 
-  function draw(){
+  function draw(now){
     const w = innerWidth, h = innerHeight;
     ctx.clearRect(0,0,w,h);
 
-    // fondo con flicker
-    let bg = images[scene.bgDark];
-    if (flickerOn && images[scene.bgLight]) bg = images[scene.bgLight];
+    // Fondo según escena + parpadeo
+    let bg;
+    if (sceneKey === "pasillo") {
+      bg = flickerOn ? images.pasillo_luz : images.pasillo_oscuro;
+    } else {
+      bg = flickerOn ? images.tres_luz : images.tres_oscuro;
+    }
     drawCover(bg, w, h);
 
-    // hotspot puerta (debug suave)
-    const dr = doorRect(scene, w, h);
+    // Puerta hotspot (debug suave)
+    const dr = doorRect(w,h);
     ctx.save();
     ctx.globalAlpha = 0.10;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(dr.x, dr.y, dr.w, dr.h);
     ctx.restore();
 
-    // jugador
+    // Jugador
     const pr = playerRect(w,h);
 
-    // sombra simple en el suelo
     ctx.save();
     ctx.globalAlpha = 0.28;
     ctx.fillStyle = "#000";
@@ -363,7 +307,7 @@
 
     ctx.drawImage(images.player, pr.x, pr.y, pr.w, pr.h);
 
-    // hint
+    // Hint
     if (intersects(pr, dr)) hintPill.textContent = "Cerca de puerta: pulsa E";
     else hintPill.textContent = "WASD/Flechas · E interactuar";
   }
@@ -374,28 +318,24 @@
 
     update(dt);
     updateFlicker(now);
-    draw();
+    draw(now);
 
     requestAnimationFrame(loop);
   }
 
-  // =========================================================
   // Start
-  // =========================================================
   (async function start(){
-    try {
+    try{
       images = await preload();
       setScene("pasillo");
-      scheduleFlicker(performance.now());
       requestAnimationFrame(loop);
-    } catch (err) {
+    } catch (err){
       console.error(err);
       statusPill.textContent = "Error ❌";
       showMsg(
         "No se han podido cargar las imágenes.\n" +
-        "Asegúrate de que la URL sea RAW y que los nombres coincidan.\n\n" +
-        "Ejemplo correcto:\n" +
-        BASE + FILES.pasillo_oscuro,
+        "Revisa nombres EXACTOS en /assets/.\n\n" +
+        "Ejemplo:\n" + BASE + FILES.player,
         0
       );
     }
