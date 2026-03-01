@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Vharum</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+<script>
+const config = {
+  type: Phaser.AUTO,
+  width: 800,
+  height: 600,
+  backgroundColor: '#000000',
+  scene: {
+    preload,
+    create,
+    update
+  }
+};
+
+const game = new Phaser.Game(config);
+
+let player;
+let lines = [];
+let worldOffset = 0;
+
+function preload() {
+  // 🔧 **IMPORTANTE: Cambia esta ruta según donde esté tu imagen**
+  // Opción 1: Si está en una carpeta 'assets' al mismo nivel
+  this.load.image('jugador', 'assets/sombra.png');
+  
+  // Opción 2: Si está en GitHub Pages (ejemplo):
+  // this.load.image('jugador', 'https://tunombre.github.io/repositorio/assets/sombra.png');
+  
+  // Opción 3: Si está en Cloudflare Pages:
+  // this.load.image('jugador', '/assets/sombra.png');
+  
+  // PARA PRUEBAS: Carga una imagen de internet para confirmar
+  // this.load.image('jugador', 'https://labs.phaser.io/assets/sprites/phaser3-logo.png');
+}
+
+function create() {
+  // TEXTO DE PRUEBA
+  this.add.text(200, 50, 'Vharum', {
+    font: '20px Arial',
+    fill: '#ff0000'
+  }).setOrigin(0.5);
+
+  // JUGADOR
+  player = this.add.image(400, 300, 'jugador');
+  player.setScale(0.5);
+  
+  // Si la imagen no carga, mostrará un cuadrado rojo
+  if (!this.textures.exists('jugador')) {
+    console.error('❌ Textura "jugador" no encontrada');
+    player = this.add.rectangle(400, 300, 100, 100, 0xff0000);
+  }
+
+  // Líneas del pasillo
+  for (let i = 0; i < 20; i++) {
+    let line = this.add.rectangle(400, i * 40, 300, 2, 0x444444);
+    lines.push(line);
+  }
+  
+  // Depuración
+  console.log('✅ Escena creada');
+  console.log('Texturas cargadas:', this.textures.list);
+}
+
+function update() {
+  worldOffset += 1;
+  
+  // Mover el mundo hacia abajo
+  lines.forEach(line => {
+    line.y += 1;
+    if (line.y > 600) {
+      line.y = 0;
+    }
+  });
+}
+</script>
+
+</body>
+</html>
