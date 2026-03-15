@@ -141,6 +141,40 @@
     useLight = !useLight;
     if(useLight) nextF = t + (80 + Math.random()*220);
     else schedule(t);
+    let z = 1;          // escala del pasillo (distancia)
+const maxZ = 2.2;   // cuánto puede “acercarse” la cámara
+const minZ = 1;     // posición inicial
+
+function loop(t){
+  if(!running) return;
+  blink(t);
+
+  // Movimiento lateral (izquierda/derecha)
+  if(keys["a"]||keys["A"]||keys["ArrowLeft"])  x -= speed;
+  if(keys["d"]||keys["D"]||keys["ArrowRight"]) x += speed;
+
+  // “Caminar hacia adelante / atrás” → cambia el zoom
+  if(keys["w"]||keys["W"]||keys["ArrowUp"]) {
+    z += 0.02;
+    if(z > maxZ) z = maxZ;
+  }
+  if(keys["s"]||keys["S"]||keys["ArrowDown"]) {
+    z -= 0.02;
+    if(z < minZ) z = minZ;
+  }
+
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  // Fondo con efecto de acercamiento
+  const bg = useLight ? bgLight : bgDark;
+  const w = innerWidth, h = innerHeight;
+  const s = Math.max(w/bg.width, h/bg.height) * z;
+  const dw = bg.width * s, dh = bg.height * s;
+  ctx.drawImage(bg, (w - dw)/2, (h - dh)/2, dw, dh);
+
+  requestAnimationFrame(loop);
+}
+
   }
 
   function drawCover(img){
