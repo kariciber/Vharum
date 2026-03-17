@@ -12,11 +12,13 @@
     overflow:hidden;
     font-family: system-ui, sans-serif;
   }
+
   canvas {
     display:block;
     width:100vw;
     height:100vh;
   }
+
   #msg {
     position:fixed;
     top:10px; left:10px; right:10px;
@@ -27,6 +29,7 @@
     border:1px solid rgba(255,255,255,0.2);
     pointer-events:none;
   }
+
   #startScreen {
     position:fixed;
     inset:0;
@@ -38,11 +41,13 @@
     color:white;
     text-align:center;
   }
+
   #startTitle {
     font-size:48px;
     margin-bottom:20px;
     letter-spacing:4px;
   }
+
   #startBtn {
     padding:12px 24px;
     background:white;
@@ -52,11 +57,13 @@
     font-size:20px;
     cursor:pointer;
   }
+
   #startScreen.fadeOut {
     transition: opacity 0.8s ease;
     opacity:0;
     pointer-events:none;
   }
+
   #fade {
     position:fixed;
     inset:0;
@@ -67,10 +74,11 @@
   }
 </style>
 </head>
+
 <body>
 
 <div id="startScreen">
-  <div id="startTitle">VHARUM — Nivel 1</div>
+  <div id="startTitle">VHARUM</div>
   <button id="startBtn">Iniciar</button>
 </div>
 
@@ -81,21 +89,13 @@
 <script>
 (async () => {
 
-  // RUTAS adaptadas a assets/
+  // --- Archivos ---
   const FILES = {
-    bgDark: "assets/pasillo2oscuro.png",
-    bgLight: "assets/pasiiloluz.png",
+    bgDark: "assets/pasillooscuro.png",
+    bgLight: "assets/pasilloluz.png",
     threeDoorsDark: "assets/trespuertasoscuras.png",
     threeDoorsLight: "assets/trespuertasluz.png",
-    doorOpen: "assets/puertaabierta.png",
-    roomExit: "assets/habitacionexit.png",
-    roomGrid: "assets/habitacionconrejilla.png",
-    planta1: "assets/planta1.png",
-    planta2: "assets/planta2.png",
-    planta3: "assets/planta3.png",
-    elevatorOpen: "assets/ascensorabiertoplanta2.png",
-    elevatorLight: "assets/ascensorabiertoplanta2luz.png",
-    elevatorClosed: "assets/ascensorcerradoplanta3.png"
+    doorOpen: "assets/puerta.png"
   };
 
   const startScreen = document.getElementById("startScreen");
@@ -114,105 +114,108 @@
   addEventListener("resize", resize);
   resize();
 
-  // cargar imágenes
-  function load(url){
-    return new Promise((res,rej)=>{
-      const img=new Image();
-      img.onload=()=>res(img);
-      img.onerror=()=>rej(url);
-      img.src=url;
+  function load(url) {
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      img.onload = ()=>resolve(img);
+      img.onerror = ()=>reject(url);
+      img.src = url;
     });
   }
 
-  let images={};
-  try {
-    const entries=Object.entries(FILES);
-    const loaded = await Promise.all(entries.map(([k,v])=>load(v)));
-    entries.forEach(([k],i)=>images[k]=loaded[i]);
-    msg.textContent="Listo — WASD / Flechas, E para interactuar";
+  let bgDark, bgLight, threeDoorsDark, threeDoorsLight, doorOpen;
+  try{
+    [bgDark, bgLight, threeDoorsDark, threeDoorsLight, doorOpen] = await Promise.all([
+      load(FILES.bgDark),
+      load(FILES.bgLight),
+      load(FILES.threeDoorsDark),
+      load(FILES.threeDoorsLight),
+      load(FILES.doorOpen)
+    ]);
+    msg.textContent = "Listo — WASD / Flechas, E para interactuar";
   } catch(err){
-    msg.textContent="❌ Error al cargar alguna imagen";
-    console.error(err);
+    msg.textContent = "❌ Error al cargar imágenes";
     return;
   }
 
-  const keys={};
-  addEventListener("keydown",e=>keys[e.key]=true);
-  addEventListener("keyup",e=>keys[e.key]=false);
+  const keys = {};
+  addEventListener("keydown", e => keys[e.key] = true);
+  addEventListener("keyup",   e => keys[e.key] = false);
 
-  let x=innerWidth*0.5;
-  let y=innerHeight*0.75;
-  const speed=3;
-  let z=1;
-  const maxZ=2.2;
-  const minZ=1;
+  let x = innerWidth * 0.5;
+  let y = innerHeight * 0.75;
+  const speed = 3;
+  let z = 1;
+  const maxZ = 2.2;
+  const minZ = 1;
+  let scene = 1; // 1=pasillo, 2=tres puertas, 3=puerta abierta
 
-  // escena actual
-  let scene=1; 
-  // 1 pasillo, 2 puertas, 3 puerta abierta, 4 ascensor, ...
-
-  // parpadeo
-  let useLight=false;
-  let nextF=performance.now()+800;
-  function schedule(t){nextF=t+(700+Math.random()*1800);}
+  // --- Parpadeo ---
+  let useLight = false;
+  let nextF = performance.now() + 800;
+  function schedule(t){ nextF = t + (700 + Math.random() * 1800); }
   function blink(t){
-    if(t<nextF)return;
-    useLight=!useLight;
-    if(useLight)nextF=t+(80+Math.random()*220);
+    if(t < nextF) return;
+    useLight = !useLight;
+    if(useLight) nextF = t + (80 + Math.random() * 220);
     else schedule(t);
   }
 
-  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 
-  let running=false;
-  let interacting=false;
+  let running = false;
+  let interacting = false;
 
-  function drawImageScaled(img,zoom){
-    const w=innerWidth,h=innerHeight;
-    const s=Math.max(w/img.width,h/img.height)*zoom;
-    const dw=img.width*s,dh=img.height*s;
+  function drawImageScaled(img, zoom){
+    const w = innerWidth, h = innerHeight;
+    const s = Math.max(w/img.width, h/img.height) * zoom;
+    const dw = img.width * s, dh = img.height * s;
     ctx.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
   }
 
   function loop(t){
-    if(!running)return;
+    if(!running) return;
     blink(t);
+
     if(interacting){
-      drawImageScaled(images.doorOpen,1);
+      drawImageScaled(doorOpen,1); // muestra puerta abierta estática
       requestAnimationFrame(loop);
       return;
     }
 
-    if(keys["a"]||keys["A"]||keys["ArrowLeft"])  x-=speed;
-    if(keys["d"]||keys["D"]||keys["ArrowRight"]) x+=speed;
+    // Movimiento lateral
+    if(keys["a"]||keys["A"]||keys["ArrowLeft"])  x -= speed;
+    if(keys["d"]||keys["D"]||keys["ArrowRight"]) x += speed;
+
+    // Avance/retroceso (zoom efecto)
     if(keys["w"]||keys["W"]||keys["ArrowUp"]) {
-      z+=0.02; if(z>maxZ) z=maxZ;
+      z += 0.02;
+      if(z > maxZ) z = maxZ;
     }
     if(keys["s"]||keys["S"]||keys["ArrowDown"]) {
-      z-=0.02; if(z<minZ) z=minZ;
+      z -= 0.02;
+      if(z < minZ) z = minZ;
     }
 
-    if(z>=maxZ && scene===1){
-      scene=2; z=1;
+    // Cambio de escena principal
+    if(z >= maxZ && scene === 1){
+      scene = 2;
+      z = 1;
     }
 
-    x=clamp(x,innerWidth*0.05,innerWidth*0.95);
-
+    x = clamp(x, innerWidth*0.05, innerWidth*0.95);
+    y = clamp(y, innerHeight*0.35, innerHeight*0.95);
     ctx.clearRect(0,0,innerWidth,innerHeight);
 
     let bg;
-    if(scene===1){
-      bg = useLight?images.bgLight:images.bgDark;
-    } else if(scene===2){
-      bg = useLight?images.threeDoorsLight:images.threeDoorsDark;
-      if(keys["e"]||keys["E"]) openDoor();
-    } else if(scene===3){
-      bg = images.doorOpen;
-      if(keys["e"]||keys["E"]) nextScene();
-    } else if(scene===4){
-      bg = useLight?images.elevatorLight:images.elevatorOpen;
+    if(scene === 1) {
+      bg = useLight ? bgLight : bgDark;
+    } else if(scene === 2) {
+      bg = useLight ? threeDoorsLight : threeDoorsDark;
+      // Si presionas E en las puertas -> abre
+      if(keys["e"] || keys["E"]) openDoor();
     } else {
-      bg = images.bgDark;
+      bg = doorOpen;
     }
 
     drawImageScaled(bg,z);
@@ -220,28 +223,23 @@
   }
 
   function openDoor(){
-    if(interacting)return;
-    interacting=true;
-    fade.style.opacity=1;
+    if(interacting) return;
+    interacting = true;
+    fade.style.opacity = 1;
+
     setTimeout(()=>{
-      fade.style.opacity=0;
-      scene=3;
-      interacting=false;
-      msg.textContent="Puerta abierta — Presiona E para entrar";
-    },1000);
-  }
-  function nextScene(){
-    fade.style.opacity=1;
-    setTimeout(()=>{
-      fade.style.opacity=0;
-      scene=4; // siguiente zona (ascensor, planta2, etc.)
-      msg.textContent="Ascensor ▶ Nivel 2";
-    },1000);
+      fade.style.opacity = 0;
+      scene = 3; // puerta abierta
+      msg.textContent = "Puerta abierta...";
+      setTimeout(()=>{
+        msg.textContent = "Fin de la demo 👁️";
+      }, 2000);
+    }, 1200);
   }
 
-  startBtn.onclick=()=>{
+  startBtn.onclick = ()=>{
     startScreen.classList.add("fadeOut");
-    running=true;
+    running = true;
     requestAnimationFrame(loop);
   };
 
@@ -250,4 +248,3 @@
 
 </body>
 </html>
-
