@@ -1,443 +1,313 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vharum</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vharum</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+<style>
+  body {
+    margin: 0;
+    background: black;
+    overflow: hidden;
+    font-family: system-ui, sans-serif;
+    color: white;
+  }
 
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      background: black;
-      overflow: hidden;
-      font-family: system-ui, sans-serif;
-      color: white;
-    }
+  #gameContainer {
+    position: relative;
+    width: 100vw;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+  }
 
-    body {
-      position: relative;
-    }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
 
-    #gameContainer {
-      position: relative;
-      width: 100vw;
-      height: calc(100vh - 60px);
-      overflow: hidden;
-      background: black;
-    }
+  #controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+  }
 
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+  #controls button {
+    background: white;
+    color: black;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 16px;
+    cursor: pointer;
+  }
 
-    #controls {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 60px;
-      background: rgba(0, 0, 0, 0.85);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 0 10px;
-      z-index: 20;
-    }
+  #msg {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.55);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+    pointer-events: none;
+  }
 
-    #controls button {
-      background: white;
-      color: black;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 14px;
-      font-size: 15px;
-      cursor: pointer;
-      min-width: 92px;
-    }
+  #startScreen {
+    position: fixed;
+    inset: 0;
+    background: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
 
-    #msg {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      padding: 10px 12px;
-      background: rgba(0, 0, 0, 0.55);
-      color: white;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      pointer-events: none;
-      z-index: 15;
-      font-size: 14px;
-    }
+  #startTitle {
+    font-size: 48px;
+    margin-bottom: 20px;
+    letter-spacing: 4px;
+  }
 
-    #startScreen {
-      position: fixed;
-      inset: 0;
-      background: black;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      text-align: center;
-      z-index: 30;
-      padding: 20px;
-    }
+  #startBtn {
+    padding: 12px 24px;
+    background: white;
+    color: black;
+    border: none;
+    border-radius: 6px;
+    font-size: 20px;
+    cursor: pointer;
+  }
 
-    #startTitle {
-      font-size: clamp(32px, 6vw, 48px);
-      margin-bottom: 20px;
-      letter-spacing: 4px;
-    }
+  #startScreen.fadeOut {
+    transition: opacity 0.8s ease;
+    opacity: 0;
+    pointer-events: none;
+  }
 
-    #startBtn {
-      padding: 12px 24px;
-      background: white;
-      color: black;
-      border: none;
-      border-radius: 8px;
-      font-size: 20px;
-      cursor: pointer;
-    }
-
-    #startScreen.fadeOut {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.8s ease;
-    }
-
-    #fade {
-      position: fixed;
-      inset: 0;
-      background: black;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.8s ease;
-      z-index: 25;
-    }
-
-    @media (max-width: 560px) {
-      #controls {
-        gap: 8px;
-      }
-
-      #controls button {
-        font-size: 14px;
-        padding: 8px 10px;
-        min-width: auto;
-      }
-
-      #msg {
-        font-size: 13px;
-      }
-    }
-  </style>
+  #fade {
+    position: fixed;
+    inset: 0;
+    background: black;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.8s ease;
+  }
+</style>
 </head>
 <body>
 
-  <div id="startScreen">
-    <div id="startTitle">VHARUM - Nivel 1</div>
-    <button id="startBtn">Iniciar</button>
-  </div>
+<div id="startScreen">
+  <div id="startTitle">VHARUM - Nivel 1</div>
+  <button id="startBtn">Iniciar</button>
+</div>
 
-  <div id="msg">Cargando imágenes...</div>
+<div id="msg">Cargando imágenes...</div>
 
-  <div id="gameContainer">
-    <canvas id="c"></canvas>
-  </div>
+<div id="gameContainer">
+  <canvas id="c"></canvas>
+</div>
 
-  <div id="controls">
-    <button id="btnMenu">Menú</button>
-    <button id="btnRestart">Reiniciar</button>
-    <button id="btnLight">Linterna: OFF</button>
-  </div>
+<div id="controls">
+  <button id="btnMenu">Menú</button>
+  <button id="btnHelp">Ayuda</button>
+  <button id="btnExit">Salir</button>
+</div>
 
-  <div id="fade"></div>
+<div id="fade"></div>
 
-  <script>
-    (async () => {
-      const FILES = {
-        bgDark: "assets/planta1.png",
-        bgLight: "assets/pasillooscuro.png",
-        threeDoorsDark: "assets/puerta.png",
-        threeDoorsLight: "assets/puertaabierta.png",
-        doorOpen: "assets/habitacioncontunel.png",
-        ascensorOpen: "assets/puerta2.png",
-        ascensorLight: "assets/ascensorabiertoplanta2.png",
-        planta2: "assets/planta2.png"
+<script>
+(async () => {
+
+  const FILES = {
+    bgDark: "assets/pasillooscuro.png",
+    bgLight: "assets/pasilloluz.png",
+    threeDoorsDark: "assets/trespuertasoscuras.png",
+    threeDoorsLight: "assets/trespuertasluz.png",
+    doorOpen: "assets/habitacioncontunel.png",
+    ascensorOpen: "assets/ascensorabiertoplanta2.png",
+    ascensorLight: "assets/ascensorabiertoplanta2luz.png",
+    planta2: "assets/planta2.png"
+  };
+
+  const startScreen = document.getElementById("startScreen");
+  const startBtn = document.getElementById("startBtn");
+  const msg = document.getElementById("msg");
+  const fade = document.getElementById("fade");
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+
+  function resize() {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(canvas.clientWidth * dpr);
+    canvas.height = Math.floor(canvas.clientHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  addEventListener("resize", resize);
+  resize();
+
+  function load(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        console.log("✔ cargado:", url);
+        resolve(img);
       };
+      img.onerror = () => {
+        console.error("❌ error:", url);
+        reject(url);
+      };
+      img.src = url;
+    });
+  }
 
-      const startScreen = document.getElementById("startScreen");
-      const startBtn = document.getElementById("startBtn");
-      const msg = document.getElementById("msg");
-      const fade = document.getElementById("fade");
-      const canvas = document.getElementById("c");
-      const ctx = canvas.getContext("2d");
+  let images = {};
+  try {
+    const entries = Object.entries(FILES);
+    const loaded = await Promise.all(entries.map(([k, v]) => load(v)));
+    entries.forEach(([k], i) => images[k] = loaded[i]);
+    msg.textContent = "Listo - WASD / Flechas, E para interactuar";
+  } catch (err) {
+    msg.textContent = "❌ Error cargando: " + err;
 
-      const btnLight = document.getElementById("btnLight");
-      const btnRestart = document.getElementById("btnRestart");
-      const btnMenu = document.getElementById("btnMenu");
+    ctx.fillStyle = "darkred";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "white";
+    ctx.font = "20px sans-serif";
+    ctx.fillText("ERROR:", 20, 40);
+    ctx.fillText(err, 20, 70);
+    return;
+  }
 
-      let images = {};
-      let keys = {};
+  const keys = {};
+  addEventListener("keydown", e => keys[e.key] = true);
+  addEventListener("keyup", e => keys[e.key] = false);
 
-      let x = window.innerWidth * 0.5;
-      let y = window.innerHeight * 0.75;
-      let speed = 3;
+  let z = 1, maxZ = 2.2, minZ = 1;
+  let scene = 1;
+  let interacting = false, running = false;
 
-      let z = 1;
-      let minZ = 1;
-      let maxZ = 2.2;
+  let useLight = false, nextF = performance.now() + 800;
 
-      let scene = 1;
-      let interacting = false;
-      let running = false;
-      let flashlight = false;
+  function schedule(t) {
+    nextF = t + (700 + Math.random() * 1800);
+  }
 
-      let useLight = false;
-      let nextF = performance.now() + 800;
+  function blink(t) {
+    if (t < nextF) return;
+    useLight = !useLight;
+    if (useLight) nextF = t + (80 + Math.random() * 220);
+    else schedule(t);
+  }
 
-      function resize() {
-        const rect = canvas.getBoundingClientRect();
-        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  function drawImageScaled(img, zoom) {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const s = Math.max(w / img.width, h / img.height) * zoom;
+    const dw = img.width * s;
+    const dh = img.height * s;
+    ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+  }
 
-        canvas.width = Math.floor(rect.width * dpr);
-        canvas.height = Math.floor(rect.height * dpr);
+  function loop(t) {
+    if (!running) return;
 
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
+    blink(t);
 
-      window.addEventListener("resize", resize);
-      resize();
+    if (!interacting) {
+      if (keys["w"] || keys["W"] || keys["ArrowUp"]) z += 0.02;
+      if (keys["s"] || keys["S"] || keys["ArrowDown"]) z -= 0.02;
+      z = Math.max(minZ, Math.min(maxZ, z));
+    }
 
-      function load(url) {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(url);
-          img.src = url;
-        });
-      }
+    if (z >= maxZ && scene === 1) {
+      scene = 2;
+      z = 1;
+    }
 
-      try {
-        const entries = Object.entries(FILES);
-        const loaded = await Promise.all(entries.map(([, v]) => load(v)));
-        entries.forEach(([k], i) => {
-          images[k] = loaded[i];
-        });
-        msg.textContent = "Listo - WASD o flechas, E para interactuar, L para linterna";
-      } catch (err) {
-        msg.textContent = "❌ Error al cargar imagen: " + err;
-        console.error("Error cargando assets:", err);
-        return;
-      }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      function schedule(t) {
-        nextF = t + (700 + Math.random() * 1800);
-      }
+    let bg;
 
-      function blink(t) {
-        if (t < nextF) return;
+    if (scene === 1) {
+      bg = useLight ? images.bgLight : images.bgDark;
+    } else if (scene === 2) {
+      bg = useLight ? images.threeDoorsLight : images.threeDoorsDark;
+      if (keys["e"] || keys["E"]) openDoor();
+    } else if (scene === 3) {
+      bg = images.doorOpen;
+      if (keys["e"] || keys["E"]) nextScene();
+    } else if (scene === 4) {
+      bg = useLight ? images.ascensorLight : images.ascensorOpen;
+      if (keys["e"] || keys["E"]) planta2Scene();
+    } else {
+      bg = images.planta2;
+    }
 
-        useLight = !useLight;
+    drawImageScaled(bg, z);
+    requestAnimationFrame(loop);
+  }
 
-        if (useLight) {
-          nextF = t + (80 + Math.random() * 220);
-        } else {
-          schedule(t);
-        }
-      }
+  function openDoor() {
+    if (interacting) return;
+    interacting = true;
+    fade.style.opacity = 1;
+    setTimeout(() => {
+      fade.style.opacity = 0;
+      scene = 3;
+      interacting = false;
+      msg.textContent = "Puerta abierta - pulsa E";
+    }, 800);
+  }
 
-      function drawImageScaled(img, zoom) {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
+  function nextScene() {
+    if (interacting) return;
+    interacting = true;
+    fade.style.opacity = 1;
+    setTimeout(() => {
+      fade.style.opacity = 0;
+      scene = 4;
+      interacting = false;
+      msg.textContent = "Ascensor - Nivel 2";
+    }, 800);
+  }
 
-        const s = Math.max(w / img.width, h / img.height) * zoom;
-        const dw = img.width * s;
-        const dh = img.height * s;
+  function planta2Scene() {
+    if (interacting) return;
+    interacting = true;
+    fade.style.opacity = 1;
+    setTimeout(() => {
+      fade.style.opacity = 0;
+      scene = 5;
+      interacting = false;
+      msg.textContent = "Planta 2 alcanzada";
+    }, 1000);
+  }
 
-        ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
-      }
+  startBtn.onclick = () => {
+    startScreen.classList.add("fadeOut");
+    running = true;
+    requestAnimationFrame(loop);
+  };
 
-      function drawFlashlight() {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const cx = w / 2;
-        const cy = h / 2;
+  document.getElementById("btnMenu").onclick = () => alert("Menú aún no implementado");
+  document.getElementById("btnHelp").onclick = () => alert("Usa WASD / Flechas y E para interactuar");
+  document.getElementById("btnExit").onclick = () => alert("Salir del juego próximamente");
 
-        const grad = ctx.createRadialGradient(cx, cy, 50, cx, cy, 350);
-        grad.addColorStop(0, "rgba(255,255,255,0)");
-        grad.addColorStop(1, "rgba(0,0,0,0.9)");
+})();
+</script>
 
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
-      }
-
-      function openDoor() {
-        if (interacting) return;
-
-        interacting = true;
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene = 3;
-          interacting = false;
-          msg.textContent = "Puerta abierta - Presiona E para entrar";
-        }, 800);
-      }
-
-      function nextScene() {
-        if (interacting) return;
-
-        interacting = true;
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene = 4;
-          interacting = false;
-          msg.textContent = "Ascensor - Nivel 2";
-        }, 800);
-      }
-
-      function planta2Scene() {
-        if (interacting) return;
-
-        interacting = true;
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene = 5;
-          interacting = false;
-          msg.textContent = "Planta 2 alcanzada";
-        }, 1000);
-      }
-
-      function toggleLight() {
-        flashlight = !flashlight;
-        btnLight.textContent = flashlight ? "Linterna: ON" : "Linterna: OFF";
-      }
-
-      function restartGame() {
-        if (interacting) return;
-
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene = 1;
-          z = 1;
-          flashlight = false;
-          interacting = false;
-          btnLight.textContent = "Linterna: OFF";
-          msg.textContent = "Reiniciado - Nivel 1";
-        }, 800);
-      }
-
-      function previousScene() {
-        if (interacting) return;
-        if (scene <= 1) return;
-
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene--;
-          z = 1;
-          interacting = false;
-          msg.textContent = "Retrocediste al nivel anterior";
-        }, 800);
-      }
-
-      function loop(t) {
-        if (!running) return;
-
-        blink(t);
-
-        if (!interacting) {
-          if (keys["a"] || keys["A"] || keys["ArrowLeft"]) x -= speed;
-          if (keys["d"] || keys["D"] || keys["ArrowRight"]) x += speed;
-          if (keys["w"] || keys["W"] || keys["ArrowUp"]) {
-            z += 0.02;
-            if (z > maxZ) z = maxZ;
-          }
-          if (keys["s"] || keys["S"] || keys["ArrowDown"]) {
-            z -= 0.02;
-            if (z < minZ) z = minZ;
-          }
-        }
-
-        if (z >= maxZ && scene === 1) {
-          scene = 2;
-          z = 1;
-          msg.textContent = "Has avanzado al pasillo de puertas";
-        }
-
-        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-
-        let bg = null;
-
-        if (scene === 1) {
-          bg = useLight ? images.bgLight : images.bgDark;
-        } else if (scene === 2) {
-          bg = useLight ? images.threeDoorsLight : images.threeDoorsDark;
-          if ((keys["e"] || keys["E"]) && !interacting) openDoor();
-        } else if (scene === 3) {
-          bg = images.doorOpen;
-          if ((keys["e"] || keys["E"]) && !interacting) nextScene();
-        } else if (scene === 4) {
-          bg = useLight ? images.ascensorLight : images.ascensorOpen;
-          if ((keys["e"] || keys["E"]) && !interacting) planta2Scene();
-        } else if (scene === 5) {
-          bg = images.planta2;
-        }
-
-        if (bg) {
-          drawImageScaled(bg, z);
-        }
-
-        if (flashlight) {
-          drawFlashlight();
-        }
-
-        requestAnimationFrame(loop);
-      }
-
-      window.addEventListener("keydown", (e) => {
-        keys[e.key] = true;
-
-        if (e.key === "l" || e.key === "L") {
-          toggleLight();
-        }
-      });
-
-      window.addEventListener("keyup", (e) => {
-        keys[e.key] = false;
-      });
-
-      btnLight.addEventListener("click", toggleLight);
-      btnRestart.addEventListener("click", restartGame);
-      btnMenu.addEventListener("click", previousScene);
-
-      startBtn.addEventListener("click", () => {
-        startScreen.classList.add("fadeOut");
-        running = true;
-        msg.textContent = "Explora el nivel...";
-        requestAnimationFrame(loop);
-      });
-    })();
-  </script>
 </body>
 </html>
