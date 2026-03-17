@@ -1,443 +1,252 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vharum</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vharum</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      background: black;
-      overflow: hidden;
-      font-family: system-ui, sans-serif;
-      color: white;
-    }
-
-    body {
-      position: relative;
-    }
-
-    #gameContainer {
-      position: relative;
-      width: 100vw;
-      height: calc(100vh - 60px);
-      overflow: hidden;
-      background: black;
-    }
-
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-
-    #controls {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 60px;
-      background: rgba(0, 0, 0, 0.85);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 0 10px;
-      z-index: 20;
-    }
-
-    #controls button {
-      background: white;
-      color: black;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 14px;
-      font-size: 15px;
-      cursor: pointer;
-      min-width: 92px;
-    }
-
-    #msg {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      padding: 10px 12px;
-      background: rgba(0, 0, 0, 0.55);
-      color: white;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      pointer-events: none;
-      z-index: 15;
-      font-size: 14px;
-    }
-
-    #startScreen {
-      position: fixed;
-      inset: 0;
-      background: black;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      text-align: center;
-      z-index: 30;
-      padding: 20px;
-    }
-
-    #startTitle {
-      font-size: clamp(32px, 6vw, 48px);
-      margin-bottom: 20px;
-      letter-spacing: 4px;
-    }
-
-    #startBtn {
-      padding: 12px 24px;
-      background: white;
-      color: black;
-      border: none;
-      border-radius: 8px;
-      font-size: 20px;
-      cursor: pointer;
-    }
-
-    #startScreen.fadeOut {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.8s ease;
-    }
-
-    #fade {
-      position: fixed;
-      inset: 0;
-      background: black;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.8s ease;
-      z-index: 25;
-    }
-
-    @media (max-width: 560px) {
-      #controls {
-        gap: 8px;
-      }
-
-      #controls button {
-        font-size: 14px;
-        padding: 8px 10px;
-        min-width: auto;
-      }
-
-      #msg {
-        font-size: 13px;
-      }
-    }
-  </style>
+<style>
+  body {
+    margin:0;
+    background:black;
+    overflow:hidden;
+    font-family: system-ui, sans-serif;
+  }
+  canvas {
+    display:block;
+    width:100vw;
+    height:100vh;
+  }
+  #msg {
+    position:fixed;
+    top:10px; left:10px; right:10px;
+    padding:10px 12px;
+    background:rgba(0,0,0,0.6);
+    color:white;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.2);
+    pointer-events:none;
+  }
+  #startScreen {
+    position:fixed;
+    inset:0;
+    background:black;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    color:white;
+    text-align:center;
+  }
+  #startTitle {
+    font-size:48px;
+    margin-bottom:20px;
+    letter-spacing:4px;
+  }
+  #startBtn {
+    padding:12px 24px;
+    background:white;
+    color:black;
+    border:none;
+    border-radius:6px;
+    font-size:20px;
+    cursor:pointer;
+  }
+  #startScreen.fadeOut {
+    transition: opacity 0.8s ease;
+    opacity:0;
+    pointer-events:none;
+  }
+  #fade {
+    position:fixed;
+    inset:0;
+    background:black;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.8s ease;
+  }
+</style>
 </head>
+
 <body>
 
-  <div id="startScreen">
-    <div id="startTitle">VHARUM - Nivel 1</div>
-    <button id="startBtn">Iniciar</button>
-  </div>
+<div id="startScreen">
+  <div id="startTitle">VHARUM — Nivel 1</div>
+  <button id="startBtn">Iniciar</button>
+</div>
 
-  <div id="msg">Cargando imágenes...</div>
+<div id="msg">Cargando imágenes...</div>
+<canvas id="c"></canvas>
+<div id="fade"></div>
 
-  <div id="gameContainer">
-    <canvas id="c"></canvas>
-  </div>
+<script>
+(async () => {
 
-  <div id="controls">
-    <button id="btnMenu">Menú</button>
-    <button id="btnRestart">Reiniciar</button>
-    <button id="btnLight">Linterna: OFF</button>
-  </div>
+  // Imágenes dentro de /assets/
+  const FILES = {
+    bgDark: "assets/pasillo2oscuro.png",
+    bgLight: "assets/pasilloLuz1.png",
+    doorOpen: "assets/puertaabierta.png",
+    habitacionExit: "assets/habitacionexit.png",
+    habitacionRejilla: "assets/habitacionconrejilla.png",
+    planta1: "assets/planta1.png",
+    planta2: "assets/planta2.png",
+    planta3: "assets/planta3.png",
+    ascensorOpen: "assets/ascensorabiertoplanta2.png",
+    ascensorLight: "assets/ascensorabiertoplanta2luz.png",
+    ascensorClosed: "assets/ascensorcerradoplanta3.png"
+  };
 
-  <div id="fade"></div>
 
-  <script>
-    (async () => {
-      const FILES = {
-        bgDark: "assets/planta1.png",
-        bgLight: "assets/pasillooscuro.png",
-        threeDoorsDark: "assets/puerta.png",
-        threeDoorsLight: "assets/puertaabierta.png",
-        doorOpen: "assets/habitacioncontunel.png",
-        ascensorOpen: "assets/puerta2.png",
-        ascensorLight: "assets/ascensorabiertoplanta2.png",
-        planta2: "assets/planta2.png"
-      };
+  const startScreen = document.getElementById("startScreen");
+  const startBtn = document.getElementById("startBtn");
+  const msg = document.getElementById("msg");
+  const fade = document.getElementById("fade");
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
 
-      const startScreen = document.getElementById("startScreen");
-      const startBtn = document.getElementById("startBtn");
-      const msg = document.getElementById("msg");
-      const fade = document.getElementById("fade");
-      const canvas = document.getElementById("c");
-      const ctx = canvas.getContext("2d");
+  function resize() {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener("resize", resize);
+  resize();
 
-      const btnLight = document.getElementById("btnLight");
-      const btnRestart = document.getElementById("btnRestart");
-      const btnMenu = document.getElementById("btnMenu");
+  // --- Cargar imágenes ---
+  function load(url){
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      img.onload = ()=>resolve(img);
+      img.onerror = ()=>reject(url);
+      img.src = url;
+    });
+  }
 
-      let images = {};
-      let keys = {};
+  let images = {};
+  try{
+    const entries = Object.entries(FILES);
+    const loaded = await Promise.all(entries.map(([k,v])=>load(v)));
+    entries.forEach(([k], i) => images[k] = loaded[i]);
+    msg.textContent = "Listo — WASD / Flechas, E para interactuar";
+  }catch(err){
+    console.error("Error cargando imagen:", err);
+    msg.textContent = "❌ Error al cargar alguna imagen";
+    return;
+  }
 
-      let x = window.innerWidth * 0.5;
-      let y = window.innerHeight * 0.75;
-      let speed = 3;
+  const keys = {};
+  addEventListener("keydown", e => keys[e.key] = true);
+  addEventListener("keyup", e => keys[e.key] = false);
 
-      let z = 1;
-      let minZ = 1;
-      let maxZ = 2.2;
+  // Estado del jugador/cámara
+  let x = innerWidth * 0.5;
+  let y = innerHeight * 0.75;
+  const speed = 3;
+  let z = 1;
+  const maxZ = 2.2;
+  const minZ = 1;
+  let scene = 1; // 1 pasillo, 2 puertas, 3 puerta abierta, 4 ascensor
 
-      let scene = 1;
-      let interacting = false;
-      let running = false;
-      let flashlight = false;
+  // Parpadeo de luz
+  let useLight = false;
+  let nextF = performance.now() + 800;
+  function schedule(t){ nextF = t + (700 + Math.random() * 1800); }
+  function blink(t){
+    if (t < nextF) return;
+    useLight = !useLight;
+    if (useLight) nextF = t + (80 + Math.random() * 220);
+    else schedule(t);
+  }
 
-      let useLight = false;
-      let nextF = performance.now() + 800;
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
-      function resize() {
-        const rect = canvas.getBoundingClientRect();
-        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  let running = false;
+  let interacting = false;
 
-        canvas.width = Math.floor(rect.width * dpr);
-        canvas.height = Math.floor(rect.height * dpr);
+  function drawImageScaled(img, zoom){
+    const w = innerWidth, h = innerHeight;
+    const s = Math.max(w/img.width, h/img.height) * zoom;
+    const dw = img.width*s, dh = img.height*s;
+    ctx.drawImage(img, (w - dw)/2, (h - dh)/2, dw, dh);
+  }
 
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
+  function loop(t){
+    if(!running) return;
+    blink(t);
 
-      window.addEventListener("resize", resize);
-      resize();
+    if(interacting){
+      drawImageScaled(images.doorOpen,1);
+      requestAnimationFrame(loop);
+      return;
+    }
 
-      function load(url) {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(url);
-          img.src = url;
-        });
-      }
+    // Movimiento
+    if(keys["a"]||keys["A"]||keys["ArrowLeft"])  x -= speed;
+    if(keys["d"]||keys["D"]||keys["ArrowRight"]) x += speed;
+    if(keys["w"]||keys["W"]||keys["ArrowUp"]) {
+      z += 0.02; if(z>maxZ) z=maxZ;
+    }
+    if(keys["s"]||keys["S"]||keys["ArrowDown"]) {
+      z -= 0.02; if(z<minZ) z=minZ;
+    }
 
-      try {
-        const entries = Object.entries(FILES);
-        const loaded = await Promise.all(entries.map(([, v]) => load(v)));
-        entries.forEach(([k], i) => {
-          images[k] = loaded[i];
-        });
-        msg.textContent = "Listo - WASD o flechas, E para interactuar, L para linterna";
-      } catch (err) {
-        msg.textContent = "❌ Error al cargar imagen: " + err;
-        console.error("Error cargando assets:", err);
-        return;
-      }
+    // Cambio de escena al avanzar
+    if(z >= maxZ && scene === 1){ scene = 2; z = 1; }
 
-      function schedule(t) {
-        nextF = t + (700 + Math.random() * 1800);
-      }
+    x = clamp(x, innerWidth*0.05, innerWidth*0.95);
 
-      function blink(t) {
-        if (t < nextF) return;
+    ctx.clearRect(0,0,innerWidth,innerHeight);
 
-        useLight = !useLight;
+    let bg;
+    if(scene === 1){
+      bg = useLight ? images.bgLight : images.bgDark;
+    } else if(scene === 2){
+      bg = useLight ? images.threeDoorsLight : images.threeDoorsDark;
+      if(keys["e"]||keys["E"]) openDoor();
+    } else if(scene === 3){
+      bg = images.doorOpen;
+      if(keys["e"]||keys["E"]) nextScene();
+    } else if(scene === 4){
+      bg = useLight ? images.ascensorLight : images.ascensorOpen;
+    } else {
+      bg = images.bgDark;
+    }
 
-        if (useLight) {
-          nextF = t + (80 + Math.random() * 220);
-        } else {
-          schedule(t);
-        }
-      }
+    drawImageScaled(bg, z);
+    requestAnimationFrame(loop);
+  }
 
-      function drawImageScaled(img, zoom) {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
+  function openDoor(){
+    if(interacting) return;
+    interacting = true;
+    fade.style.opacity = 1;
+    setTimeout(()=>{
+      fade.style.opacity = 0;
+      scene = 3;
+      interacting = false;
+      msg.textContent = "Puerta abierta — Presiona E para entrar";
+    }, 800);
+  }
 
-        const s = Math.max(w / img.width, h / img.height) * zoom;
-        const dw = img.width * s;
-        const dh = img.height * s;
+  function nextScene(){
+    fade.style.opacity = 1;
+    setTimeout(()=>{
+      fade.style.opacity = 0;
+      scene = 4;
+      msg.textContent = "Ascensor — Nivel 2";
+    }, 800);
+  }
 
-        ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
-      }
+  startBtn.onclick = ()=>{
+    startScreen.classList.add("fadeOut");
+    running = true;
+    requestAnimationFrame(loop);
+  };
 
-      function drawFlashlight() {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const cx = w / 2;
-        const cy = h / 2;
+})();
+</script>
 
-        const grad = ctx.createRadialGradient(cx, cy, 50, cx, cy, 350);
-        grad.addColorStop(0, "rgba(255,255,255,0)");
-        grad.addColorStop(1, "rgba(0,0,0,0.9)");
-
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
-      }
-
-      function openDoor() {
-        if (interacting) return;
-
-        interacting = true;
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene = 3;
-          interacting = false;
-          msg.textContent = "Puerta abierta - Presiona E para entrar";
-        }, 800);
-      }
-
-      function nextScene() {
-        if (interacting) return;
-
-        interacting = true;
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene = 4;
-          interacting = false;
-          msg.textContent = "Ascensor - Nivel 2";
-        }, 800);
-      }
-
-      function planta2Scene() {
-        if (interacting) return;
-
-        interacting = true;
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene = 5;
-          interacting = false;
-          msg.textContent = "Planta 2 alcanzada";
-        }, 1000);
-      }
-
-      function toggleLight() {
-        flashlight = !flashlight;
-        btnLight.textContent = flashlight ? "Linterna: ON" : "Linterna: OFF";
-      }
-
-      function restartGame() {
-        if (interacting) return;
-
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene = 1;
-          z = 1;
-          flashlight = false;
-          interacting = false;
-          btnLight.textContent = "Linterna: OFF";
-          msg.textContent = "Reiniciado - Nivel 1";
-        }, 800);
-      }
-
-      function previousScene() {
-        if (interacting) return;
-        if (scene <= 1) return;
-
-        fade.style.opacity = "1";
-
-        setTimeout(() => {
-          fade.style.opacity = "0";
-          scene--;
-          z = 1;
-          interacting = false;
-          msg.textContent = "Retrocediste al nivel anterior";
-        }, 800);
-      }
-
-      function loop(t) {
-        if (!running) return;
-
-        blink(t);
-
-        if (!interacting) {
-          if (keys["a"] || keys["A"] || keys["ArrowLeft"]) x -= speed;
-          if (keys["d"] || keys["D"] || keys["ArrowRight"]) x += speed;
-          if (keys["w"] || keys["W"] || keys["ArrowUp"]) {
-            z += 0.02;
-            if (z > maxZ) z = maxZ;
-          }
-          if (keys["s"] || keys["S"] || keys["ArrowDown"]) {
-            z -= 0.02;
-            if (z < minZ) z = minZ;
-          }
-        }
-
-        if (z >= maxZ && scene === 1) {
-          scene = 2;
-          z = 1;
-          msg.textContent = "Has avanzado al pasillo de puertas";
-        }
-
-        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-
-        let bg = null;
-
-        if (scene === 1) {
-          bg = useLight ? images.bgLight : images.bgDark;
-        } else if (scene === 2) {
-          bg = useLight ? images.threeDoorsLight : images.threeDoorsDark;
-          if ((keys["e"] || keys["E"]) && !interacting) openDoor();
-        } else if (scene === 3) {
-          bg = images.doorOpen;
-          if ((keys["e"] || keys["E"]) && !interacting) nextScene();
-        } else if (scene === 4) {
-          bg = useLight ? images.ascensorLight : images.ascensorOpen;
-          if ((keys["e"] || keys["E"]) && !interacting) planta2Scene();
-        } else if (scene === 5) {
-          bg = images.planta2;
-        }
-
-        if (bg) {
-          drawImageScaled(bg, z);
-        }
-
-        if (flashlight) {
-          drawFlashlight();
-        }
-
-        requestAnimationFrame(loop);
-      }
-
-      window.addEventListener("keydown", (e) => {
-        keys[e.key] = true;
-
-        if (e.key === "l" || e.key === "L") {
-          toggleLight();
-        }
-      });
-
-      window.addEventListener("keyup", (e) => {
-        keys[e.key] = false;
-      });
-
-      btnLight.addEventListener("click", toggleLight);
-      btnRestart.addEventListener("click", restartGame);
-      btnMenu.addEventListener("click", previousScene);
-
-      startBtn.addEventListener("click", () => {
-        startScreen.classList.add("fadeOut");
-        running = true;
-        msg.textContent = "Explora el nivel...";
-        requestAnimationFrame(loop);
-      });
-    })();
-  </script>
 </body>
 </html>
