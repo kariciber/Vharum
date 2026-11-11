@@ -128,55 +128,56 @@
     transform:translate(-50%,-50%) scale(1.08);
   }
 
-  /* Manos: gráficos vectoriales integrados, sin archivos externos */
+  /* Fotografía generada y recortada; dos mitades animadas por separado */
   #handsOverlay {
     position:absolute;
     inset:auto 0 -2px 0;
-    height:clamp(125px, 29vh, 300px);
+    height:clamp(75px,27vh,245px);
     z-index:6;
     opacity:0;
+    overflow:hidden;
     pointer-events:none;
     user-select:none;
-    transition:opacity .45s ease;
-    overflow:hidden;
-    filter:drop-shadow(0 -8px 13px rgba(0,0,0,.6));
+    transition:opacity .35s ease;
   }
-  #handsOverlay.visible { opacity:.88; }
-  #handsOverlay svg {
-    width:100%;
-    height:100%;
-    display:block;
-  }
-  .vharum-hand {
-    transform-box:fill-box;
-    transform-origin:50% 85%;
+  #handsOverlay.visible {opacity:.96;}
+  #handsOverlay img {
+    position:absolute;
+    left:50%;
+    bottom:0;
+    width:min(850px,90vw);
+    height:auto;
+    max-height:100%;
+    transform:translateX(-50%);
+    pointer-events:none;
+    filter:drop-shadow(0 -4px 10px rgba(0,0,0,.35));
     will-change:transform;
   }
+  #handsOverlay .vharum-left { clip-path:inset(0 50% 0 0); }
+  #handsOverlay .vharum-right { clip-path:inset(0 0 0 50%); }
   #handsOverlay.walking .vharum-left {
-    animation:vharumBobLeft .72s ease-in-out infinite alternate;
+    animation:vharumBobLeft .64s ease-in-out infinite alternate;
   }
   #handsOverlay.walking .vharum-right {
-    animation:vharumBobRight .72s ease-in-out infinite alternate;
+    animation:vharumBobRight .64s ease-in-out infinite alternate;
   }
   #handsOverlay.interacting .vharum-right {
     animation:vharumReach .36s ease-out 1 both;
   }
   @keyframes vharumBobLeft {
-    from { transform:translateY(2px) rotate(-1deg); }
-    to { transform:translateY(-12px) rotate(2deg); }
+    from {transform:translate(-50%,2px) rotate(-.6deg);}
+    to {transform:translate(-50%,-8px) rotate(.6deg);}
   }
   @keyframes vharumBobRight {
-    from { transform:translateY(-10px) rotate(1deg); }
-    to { transform:translateY(4px) rotate(-2deg); }
+    from {transform:translate(-50%,-7px) rotate(.6deg);}
+    to {transform:translate(-50%,3px) rotate(-.6deg);}
   }
   @keyframes vharumReach {
-    0% { transform:translate(0,0) rotate(0); }
-    45% { transform:translate(-48px,-68px) rotate(-8deg); }
-    100% { transform:translate(0,0) rotate(0); }
+    0%,100% {transform:translate(-50%,0);}
+    45% {transform:translate(calc(-50% - 15px),-39px) rotate(-2deg);}
   }
   @media (prefers-reduced-motion:reduce) {
-    #handsOverlay.walking .vharum-hand,
-    #handsOverlay.interacting .vharum-hand { animation:none; }
+    #handsOverlay.walking img,#handsOverlay.interacting img {animation:none;}
   }
   #controls { z-index:12; }
   @media (max-width:620px) {
@@ -201,104 +202,8 @@
   <canvas id="c"></canvas>
   <div id="hotspots" aria-label="Puntos de interacción"></div>
   <div id="handsOverlay" aria-hidden="true">
-    <svg viewBox="0 0 1200 340" preserveAspectRatio="none" role="presentation" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="vhSleeve" x1="0" y1="0" x2="1" y2=".7">
-          <stop offset="0" stop-color="#080a0b"/>
-          <stop offset=".5" stop-color="#292b2a"/>
-          <stop offset="1" stop-color="#111313"/>
-        </linearGradient>
-        <linearGradient id="vhSkin" x1=".12" y1=".1" x2=".95" y2=".9">
-          <stop offset="0" stop-color="#b39b83"/>
-          <stop offset=".3" stop-color="#816655"/>
-          <stop offset=".68" stop-color="#5e483c"/>
-          <stop offset="1" stop-color="#302824"/>
-        </linearGradient>
-        <linearGradient id="vhPalm" x1=".15" y1="0" x2=".8" y2="1">
-          <stop offset="0" stop-color="#a78b74"/>
-          <stop offset=".53" stop-color="#6c5345"/>
-          <stop offset="1" stop-color="#342924"/>
-        </linearGradient>
-        <linearGradient id="vhCuff" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#353634"/>
-          <stop offset=".5" stop-color="#171a19"/>
-          <stop offset="1" stop-color="#0a0b0c"/>
-        </linearGradient>
-        <filter id="vhGrain" x="-15%" y="-15%" width="130%" height="130%">
-          <feTurbulence type="fractalNoise" baseFrequency=".24" numOctaves="2" seed="8" result="grain"/>
-          <feColorMatrix in="grain" type="saturate" values="0" result="grey"/>
-          <feComponentTransfer in="grey" result="faint">
-            <feFuncA type="linear" slope=".10"/>
-          </feComponentTransfer>
-          <feBlend in="SourceGraphic" in2="faint" mode="multiply"/>
-        </filter>
-      </defs>
-
-      <!-- Mano izquierda: manga oscura, muñeca y dedos vistos en primera persona -->
-      <g class="vharum-hand vharum-left">
-        <path d="M33 356 C101 290 143 273 190 262 C233 254 268 278 301 315
-                 L319 366 Z" fill="url(#vhSleeve)" stroke="#0e1111" stroke-width="6"/>
-        <path d="M182 258 C206 242 233 233 259 233 C278 249 295 277 303 301
-                 C276 301 235 314 212 334 Z" fill="url(#vhCuff)" stroke="#080909" stroke-width="5"/>
-        <path d="M225 231 C240 211 257 200 279 192
-                 C288 186 297 173 307 169
-                 C319 162 327 173 323 182 L307 207
-                 C316 192 326 163 339 154
-                 C350 147 361 154 358 166 L341 212
-                 C355 178 367 156 381 153
-                 C392 151 399 160 394 171 L373 216
-                 C389 184 401 178 409 181 C420 185 419 196 411 208
-                 L388 250 C377 271 358 283 338 294
-                 C315 303 290 292 265 278
-                 L242 270 Z"
-              fill="url(#vhSkin)" stroke="#291e1a" stroke-width="3" filter="url(#vhGrain)"/>
-        <path d="M244 232 C260 205 286 208 303 222
-                 C315 233 325 241 339 249
-                 C350 257 354 280 342 291
-                 C309 296 284 284 262 274
-                 C247 265 238 252 244 232 Z"
-              fill="url(#vhPalm)" opacity=".85"/>
-        <path d="M306 206 Q319 217 328 230 M339 211 Q348 224 352 232
-                 M374 216 Q382 229 384 235"
-              fill="none" stroke="#342a24" stroke-width="3" stroke-linecap="round" opacity=".55"/>
-        <path d="M269 225 Q287 214 299 222 M286 260 Q311 274 325 269"
-              fill="none" stroke="#c0a089" stroke-width="3" stroke-linecap="round" opacity=".35"/>
-        <path d="M197 253 Q226 240 252 238" fill="none" stroke="#5a5b52" stroke-width="3" opacity=".5"/>
-      </g>
-
-      <!-- Mano derecha independiente: reflejo para mantener perspectiva natural -->
-      <g class="vharum-hand vharum-right">
-        <g transform="translate(1200 0) scale(-1 1)">
-          <path d="M24 362 C96 299 149 275 190 261
-                   C236 256 271 279 300 315 L316 365 Z"
-                fill="url(#vhSleeve)" stroke="#0b0d0d" stroke-width="6"/>
-          <path d="M185 257 C214 237 242 234 267 234
-                   C284 254 302 284 305 301 L228 339 Z"
-                fill="url(#vhCuff)" stroke="#080909" stroke-width="5"/>
-          <path d="M230 237 C245 208 267 196 291 190
-                   C302 184 309 166 320 161
-                   C331 156 339 168 335 181 L316 207
-                   C327 177 342 153 353 151
-                   C365 148 372 158 366 174 L348 214
-                   C362 181 376 156 388 156
-                   C400 159 402 171 395 183 L374 220
-                   C389 195 402 187 413 190
-                   C422 194 422 205 415 217
-                   L392 252 C379 274 351 292 329 294
-                   C302 296 272 285 249 269 Z"
-                fill="url(#vhSkin)" stroke="#2b201b" stroke-width="3" filter="url(#vhGrain)"/>
-          <path d="M246 232 Q275 212 300 220
-                   Q319 231 340 250 Q360 274 343 293
-                   Q294 291 267 274 Q244 264 246 232 Z"
-                fill="url(#vhPalm)" opacity=".88"/>
-          <path d="M315 206 Q326 219 334 231 M349 214 Q356 226 358 232
-                   M377 220 Q384 232 390 236"
-                fill="none" stroke="#352921" stroke-width="3" stroke-linecap="round" opacity=".53"/>
-          <path d="M266 227 Q283 215 302 223 M293 259 Q317 274 335 269"
-                fill="none" stroke="#d0af93" stroke-width="3" stroke-linecap="round" opacity=".33"/>
-        </g>
-      </g>
-    </svg>
+    <img class="vharum-left" alt="" draggable="false">
+    <img class="vharum-right" alt="" draggable="false">
   </div>
 </div>
 
@@ -456,6 +361,9 @@
 
   const spots = document.getElementById("hotspots");
   const handsOverlay = document.getElementById("handsOverlay");
+  // WebP con fondo transparente integrado: funciona incluso al abrir HTML local.
+  const handsData = "data:image/webp;base64,UklGRgoNAABXRUJQVlA4WAoAAAAQAAAAZwEATgAAQUxQSB8JAAAB8IZtt2m7trbdpZQ+YkzEybTnjDlt21y2bdu2MW3btu05x7RiZ5RS7h+9j8z03mvrY/1aR0RMAP7fThFRMf1flqiqmaGxlk1U1cxUVfpcKoLGtXWGffrCD42DFkrNzBSrK6J9JdF6AMNnTN7jBz/87mVPPJLkXRvCiqRo2G/q5EN+8v2fvnfyzOEAxKTvIyJoOOWfF9+5fPEqNnbn3RugplIYMcOkdx57/NFfunHxkiTJxcvvuuQvGwIQEZW+jAHomjp7xu4/eZkN3T0iknTeszEAkzpRVSmAANjkAfbu7sn6F0/96gjUS59FgPGnXHn94pXLe0j3yEyuZvDpr83uD6iYoIiiGHzsx55iZGZ4ZpJkZniQvPfSK678/CBoH0XRf5fr2diTbz/IpTe9qz8ADN9uux1HqLSXAgNPIplcg+nB+lMHwbTvIWLo/y/S3TMzuUYjSJ68wUbvPuP+lSv4J1hbKQZt9F96JNdwuLvztDEATPsWAmD4vxjB5qYnX36ZJJMvToS1keHAW19jJpsbfOzX2wEQbWjSFzB0rf+5B5jJ5ieZHpnBJyZC28Zw1BIy2fQgF13+2c3Ru3Z+iq6/vZYMtmQmGwafeze0DdTMajhqCXuSLRhO8uX//v0f//jbf761+yiIdHiGLc4kM9jizufHw1SlpUxRf/QSBls0I9j7w4cC0tEZpj5DT7a+x/3TAUBaRwWYsf++e3xsMYMtnN446b9UkQ7OMO0Z9rBNX/vxpC0mQFpCzRQ4/MRFrE+2ZZC/UZFOTRUffZHBNg1ywbzndoe1Qv0G/wwyMyPZpun8rUI6MwW+SAbbNoPknSPQgrb5x77+z27Sk+3t/G0/lU5Mse4PMoPtnBm8/2v9mmW691skGcm2d34F2oEpRl3DTLZ7cN4ESFOkhj9wlUeygBlzt4d2XIpR19KTbe9++7DmiGDf+ZEsZPBjYp2WYtS1dBbQ+UMommpHv8VkMfLdqHVYilHX0lnA4GvbNEXwzftWMVnM5NUjoR2VYtR1dJbQeT0gTdn9EfawoMmrRkI6JzGMvo7OQtxoTQEw+ER6Qei8cnjNOiUFRl9PZzG0SYqBJ9ILQudHAOmMFMMnXktnVUAx8ERmQTKe/MxO0E7IMO2e+QxWBxQDT2KWo757ArTzMUx9mgwW5CZrGhQD7qEXJHt49aaQTscw9Vl6siTXohWG3V8UMvnSTGhHozVMfYbOkgafXg/aJJG1zmGwrM6rh3U0Ckx7hs6iJrkrrFn4G4OFzcidYJ2LYs/vPMFgaXynZglwS3hpGDx3LLRTMRyykAwWJ3aWmlqTrmR5mLxvBEykEzEcupA9yQJthyYL+t/KKA+D/x0PQDoOMRy6kMES501nX/yXA4dB1pjiAGYWiMGnzj1rS1gHIaoqwKELGSxoevTScME20DUmMuZXjIzI0jBJntEP0hmImaF++JELGSyok8xkuHuEr+D9wyFrDAL8jvXZILMYDO/h3waYdAT1/WfNmf7Vx5cxWNDgmz8+hb07b5skaKZh3XtW3HbnKnokk8zIQpB0/goiKoBopdno/d7//itWrFhOMlnQ4JUzMWDPvXf70sn//sd9ydsnoDkQrL/dgK6P9ZB08hWSWYyMpUeoAmKAqVSV4KvdK9kwI1nOcP6rPwy97sm/jIOhyYL6Qz/3qUe46tMT/nrbYmYpGHxmqG2hwPiPAlCtqvPpEZGZLGgE+a/+MIiZqaqu84WhUDRdVUQATLz7M4DpsYsyS5H50jbff/3GEz/90IKPbDEEMKkcEVE9PXpY2AjykU8PgGK1RdCiaoZhEIXigx6lIHteYa9v3fqXXQGtDlEzMwCCU+hliSQf/cwIQLC6omhlQb3qgIfZQ2YZSKZHBJPkS1/cEFINYoaG0r+fbXQToxBZ706ee8JowARtLHVQfJb0ZCGTvWY4+dhRplI4NTMDMOKwL37ms5+/+M7bbn6Bhcxg4xc/AkAFBRTBB7vJ7hWeJVj9XMVbADFVKZYI6gfvecJDLPCKZctWPXf537eGmKCQgq0++pkN7iKjMMx47ZhhqFczkdKIag049htf+spnzyWZHo2zDJlLfzp7xozZGwJQFFQBYOYPu1ngePjUrxyx+TqoNy2KAoB8kQ0zg4V1/wYaiiqKqqYCTHzfs4zCJEnm/Hv/++69xwgA0zKImmD0xHd+60LSwz1Y4mO0S1UVJVYDfuE9hSEjnA2fvuQTWwsAU2k3NQCYcd8SkkyWNtyDmW+cuBkE5e6yH5JZXxKSmeFBknMv/fjWAsC0jdQEGLLnty6YS6YHS5tBkr4yr0HZBbt940bWRxalcXiQfOuST24NAKZtoQYAW330NicZySI/dMrJj5N8n1jR6nd7bfHSNxew0OlBcu6ln9xaADFtNVUAW3/i4rdIuicLnFz0y5HAZl/66odrkMKpdW08Z/tNJv57uXsWiGR6kJx70Q92AKDaSqLA5p+4ZC7JiGSRM3veB6igWn9GMotEMj1ILrrkk1sAJq0iBmz201dIhicLnR5PDRUDxMwqQVW1JjNuvHkuvVAkM5zkqz/fDNCWEAMGfe0VMjxZ6kySp5qgertkzzcYxSKZHmT3e4ZAtHkC9HvXbaQnyx1kLPnhCFSQQDD9CnrBSKaT128LmDTJMPTws8lIFjw4/8s7zkI1CwzDrqEXjYzg0r+NBbQZJhh3NRnBkicfmg1ApZIA1DDrPnoWjQzyqc8YVNaUADbtJkaw6Jl/HQ81RXUr1jmfpWM6eeU+gK4ZRdeO/1nCYNmDz49ADdWuGPavntKREVz28xEQe3tiGHeBk8HiPTlapeKgwAX00pFOPv5VwPRtKHDQg2Qky/fs2qg81PCtKmA6efp2gK6WYtzXFtOT5c/0H9aqz+QnlUBGcv4vpkBXwzD9UTJYiUl+GFZ5+ASjEkgnu2dBe1FMf5aerMbgE9tAq06w7sOMamD2sHsmtIFi+nN0VqXzQggqX3AevSLIHt44EApAsf4zdFbINdIJyEUVQudJAyGADDqVzspMX/4uaAeAC6uEwZMHi0B+Q2d1ruJ9/SF9LTr/UhPY7RkVwpe2F0GfK/IuQOw6VkZy8X8nQtD3ynzjszXYDdXhvBFQ9MGY5KcBAFZQOCDEAwAA8CIAnQEqaAFPAD8JfLVUK6e7qKl0SmNwIQlnANO3R22wLJdgMeAz7w0jbO+kAGmDT7GixavUyEbr6ZgPzRNWGTRm92rxODFIezWtF6DpIv0FnQz8rD59JjxLT+FDMeiNMoldl0i/X03WAspiPZwbpSO2h6UqwuWpc9Lgh4iaCGmCiQJKTUbx1HnEQw4VaBRswGwKhcxN5kLMDffZXdoNLuimLRtKi8DSUYTx0Keke1eABUU7Nj3Y4tyfKeYTjXSF4focIB9LjF94ffcWJ+4l5Eyni51AceiCnJPFIrZnj6l0duUq8lvft3LlRujoJzjx810JxEztIwJth2c8H/7z9kKcFxP5TNHNgf5hp5NFMhDm3gswW2go1YPx7qK1RPZgAP7zYgEDC+pr9B7QPIC9UexgoloIwSRR9c9g2lGu+3FhD0m+aOtqwedFWbIzna72ak0pWKk+X0sYNqMQEFw+sYQThoQ4KYwK5kc2vIr2Fu4N/r+wUbOobAetp6p+H9QncNCGk0A9RrR7twznQ3JXYYOxBljwIIqdI6aO0EB9P+qDZrcgKeT+1McuEK5vcsXrGWCjc3TiqUy75HIs9mH8cFZ3fHizV7LFa2UQ8Ny9M2K9bZBly5/2/+w5tn7NhFT9a6aRWRz8MAmsI10CO2eoIIf0kMuR/+MQc/QJpAPAAjmXx+jTrBvamUjDhbbgp9tYuBC0kTlbQYtvWXDmWg/kPxM4a5f5S37RZUxVbtenF9MqsRx+HguNJJKyTZe3w7Y6y0F7M+HUxJCOOve9ueow47Fc3zUA20+D1QiiYmmQ2xh9ytla/UiBUvhF9hei9XRicizQALosWG/Vi4v4h/xkzCJJm3Tr1V/nIIp7mi62DVm9zx/yQfWBRq4+2ikNu5o5LRkN02M+LmRowjLKXAO1oD+cWRWdCJ+vAdWVNF+vzFiPEvD+QtiZIjbeVBTi0aC1/2So894XJufSuxZnUiQZ74ZwDTQuAeaJgIu20RUMmRk3pos4+S1ONEbaWRqrW04kZKXDU2DIWqSmgMEsugr/iJU52b/Jo6ZrionFNQieXvHav1LfwUjFCUaomnJCmdVzWI4m6AvjLKIGK1MaI3JHROxEYNeqL5UzzPpOJRZCOtBfpnzIV3HWV3a7QD4ylAsl3yApXifI+05QDyeP+q7wVAW0VZv5dw6Yvie+9YOsvl6ABTyH4NiApdooLqwAbXWQiOWU7iYSeBCMiZJiZm0De/wlaJJeqwiv2No2AGjeg9k9Cz1x4MGbjAv+EnCHsa9S0gAAAA==";
+  handsOverlay.querySelectorAll("img").forEach(img => { img.src = handsData; });
   const keys = {};
   const minZ = 1, maxZ = 2.2;
   let z = 1;
