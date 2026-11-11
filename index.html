@@ -182,12 +182,17 @@
   #controls { z-index:12; gap:12px; }
   #controls #btnLight { background:#25201b; color:#f6e8d6; border:1px solid #66533a; }
   #controls #btnLight.light-on { background:#574226; color:#fff3cf; border-color:#f6c26d; box-shadow:0 0 14px rgba(255,192,96,.28); }
+  #controls #btnSound { background:#182523; color:#ebf4ed; border:1px solid #446052; }
+  #controls #btnSound.sound-off { background:#242327; color:#c4bfc4; border-color:#49444a; }
+  #controls #btnSound:disabled { opacity:.55;cursor:default; }
   #controls button:focus-visible {outline:2px solid #fac68e;outline-offset:3px;}
   @media (max-width:620px) {
     #controls { gap:8px; }
     #controls button { font-size:12px; padding:8px 9px; }
     #controls { gap:5px; padding:0 5px; }
-    #controls #btnLight { white-space:nowrap; }
+    #controls #btnLight, #controls #btnSound { white-space:nowrap; font-size:11px; }
+    #controls { gap:4px; }
+    #controls button { padding:7px 7px; }
     .hotspot { font-size:12px; padding:8px 10px; max-width:30%; }
     #msg { font-size:13px; }
   }
@@ -216,6 +221,7 @@
   <button id="btnMenu">Volver</button>
   <button id="btnHelp">Ayuda</button>
   <button id="btnLight" type="button" aria-pressed="false" title="Encender linterna (L)">🔦 Linterna: OFF</button>
+  <button id="btnSound" type="button" aria-pressed="true" title="Silenciar sonido (M)">🔊 Sonido: ON</button>
   <button id="btnExit">Inicio</button>
 </div>
 
@@ -246,6 +252,7 @@
   const ctx = canvas.getContext("2d");
   const gameContainer = document.getElementById("gameContainer");
   const btnLight = document.getElementById("btnLight");
+  const btnSound = document.getElementById("btnSound");
 
   // 📐 Resize fiable
   function resize() {
@@ -407,6 +414,113 @@
     ctx.fillStyle = dark;
     ctx.fillRect(0, 0, w, h);
   }
+
+  // Procedural Web Audio: se inicia desde un gesto del jugador.
+  let soundEnabled = true, audioCtx = null, audioBus = null, noiseBuffer = null;
+  let lastFootstepAt = -1000, nextAtmosphereAt = 15000;
+
+  function updateSoundButton() {
+    btnSound.textContent = soundEnabled ? "🔊 Sonido: ON" : "🔇 Sonido: OFF";
+    btnSound.classList.toggle("sound-off", !soundEnabled);
+    btnSound.setAttribute("aria-pressed", String(soundEnabled));
+    btnSound.title = soundEnabled ? "Silenciar (M)" : "Activar sonido (M)";
+  }
+  function stopAudio() {
+    const previous = audioCtx;
+    audioCtx = null;
+    audioBus = null;
+    noiseBuffer = null;
+    if (previous) {
+      try { Promise.resolve(previous.close()).catch(() => {}); }
+      catch (err) { console.warn("No se pudo cerrar el audio:", err); }
+    }
+  }
+  function beginAudio() {
+    if (!soundEnabled || audioCtx) return;
+    const AudioAPI = window.AudioContext || window.webkitAudioContext;
+    if (!AudioAPI) {
+      soundEnabled = false; btnSound.disabled = true;
+      updateSoundButton(); btnSound.title = "Web Audio no disponible";
+      return;
+    }
+    try {
+      const ctx = new AudioAPI();
+      audioCtx = ctx;
+      audioBus = ctx.createGain();
+      audioBus.gain.setValueAtTime(.0001, ctx.currentTime);
+      audioBus.gain.linearRampToValueAtTime(.40, ctx.currentTime + .7);
+      audioBus.connect(ctx.destination);
+      noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.05), ctx.sampleRate);
+      const samples = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < samples.length; i++) samples[i] = (Math.random() * 2 - 1) * .72;
+      const hum = ctx.createOscillator(), humGain = ctx.createGain();
+      hum.type = "sine"; hum.frequency.value = 54;
+      humGain.gain.value = .025;
+      hum.connect(humGain); humGain.connect(audioBus); hum.start();
+      const air = ctx.createBufferSource(), filter = ctx.createBiquadFilter();
+      const airGain = ctx.createGain();
+      air.buffer = noiseBuffer; air.loop = true;
+      filter.type = "lowpass"; filter.frequency.value = 180;
+      airGain.gain.value = .025;
+      air.connect(filter); filter.connect(airGain); airGain.connect(audioBus); air.start();
+      if (ctx.state === "suspended") Promise.resolve(ctx.resume()).catch(() => {});
+    } catch (err) {
+      console.warn("Error Web Audio", err);
+      stopAudio(); soundEnabled = false; btnSound.disabled = true; updateSoundButton();
+    }
+  }
+  function toggleSound() {
+    if (!running || btnSound.disabled) return;
+    soundEnabled = !soundEnabled;
+    if (soundEnabled) beginAudio(); else stopAudio();
+    updateSoundButton();
+  }
+  function tone(first, last, duration, volume, shape = "sine") {
+    if (!audioCtx || !audioBus) return;
+    const ctx = audioCtx, time = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = shape;
+    osc.frequency.setValueAtTime(first, time);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20, last), time + duration);
+    gain.gain.setValueAtTime(.0001, time);
+    gain.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), time + Math.min(.03, duration * .25));
+    gain.gain.exponentialRampToValueAtTime(.0001, time + duration);
+    osc.connect(gain); gain.connect(audioBus);
+    osc.start(time); osc.stop(time + duration + .025);
+  }
+  function noise(duration, hz, volume, kind = "lowpass") {
+    if (!audioCtx || !audioBus || !noiseBuffer) return;
+    const ctx = audioCtx, time = ctx.currentTime;
+    const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+    source.buffer = noiseBuffer;
+    filter.type = kind; filter.frequency.value = hz;
+    gain.gain.setValueAtTime(.0001, time);
+    gain.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), time + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, time + duration);
+    source.connect(filter); filter.connect(gain); gain.connect(audioBus);
+    source.start(time); source.stop(time + duration + .015);
+  }
+  function playStep() {
+    noise(.075, 240 + Math.random() * 130, .10);
+    tone(85, 48, .12, .045);
+  }
+  function playDoor() {
+    tone(150, 56, .57, .058, "sawtooth");
+    noise(.49, 600, .095, "bandpass");
+    tone(92, 60, .15, .045, "triangle");
+  }
+  function playElevator() {
+    tone(91, 39, .98, .09, "triangle");
+    noise(.84, 410, .11, "bandpass");
+    tone(215, 105, .34, .037, "sawtooth");
+  }
+  function playAmbientCreak() {
+    tone(110 + Math.random() * 55, 46, .78, .014, "triangle");
+    noise(.40, 380, .012, "bandpass");
+  }
+  btnSound.addEventListener("click", toggleSound);
+  updateSoundButton();
+
   const handsOverlay = document.getElementById("handsOverlay");
   // WebP con fondo transparente integrado: funciona incluso al abrir HTML local.
   const handsData = "data:image/webp;base64,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";
@@ -499,6 +613,10 @@
   function transitionTo(destination, goingBack = false) {
     if (!running || interacting || !SCENES[destination]) return;
     interacting = true;
+    if (!goingBack && scene === "doors") playDoor();
+    else if (!goingBack && scene === "lift") playElevator();
+    else if (!goingBack && scene === "tunnel") playDoor();
+    else if (!goingBack && scene !== "corridor") playAmbientCreak();
     handsOverlay.classList.remove("walking");
     handsOverlay.classList.add("interacting");
     fade.style.opacity = "1";
@@ -562,6 +680,7 @@
     keys[key] = true;
     if (e.repeat || !running) return;
     if (key === "l" || e.code === "KeyL") { toggleLight(); return; }
+    if (key === "m" || e.code === "KeyM") { toggleSound(); return; }
     if (isLeft) selectRelative(-1);
     else if (isRight) selectRelative(1);
     else if (/^[123]$/.test(e.key)) selectNumber(Number(e.key) - 1);
@@ -586,6 +705,14 @@
     const walking = !interacting && scene === "corridor" &&
       (keys["w"] || keys["arrowup"] || keys["s"] || keys["arrowdown"]);
     handsOverlay.classList.toggle("walking", Boolean(walking));
+    if (walking && t - lastFootstepAt >= 390) {
+      playStep();
+      lastFootstepAt = t;
+    }
+    if (t >= nextAtmosphereAt) {
+      playAmbientCreak();
+      nextAtmosphereAt = t + 14000 + Math.random() * 15000;
+    }
 
     if (!interacting && scene === "corridor") {
       if (keys["w"] || keys["arrowup"]) z += 0.020 * frames;
@@ -610,6 +737,7 @@
     }
     interacting = false;
     running = false;
+    stopAudio();
     setLight(false);
     beamX = targetBeamX = .5;
     beamY = targetBeamY = .47;
@@ -635,6 +763,9 @@
     z = 1;
     previousFrame = 0;
     running = true;
+    beginAudio();
+    lastFootstepAt = -1000;
+    nextAtmosphereAt = performance.now() + 12000 + Math.random() * 6000;
     setLight(false);
     beamX = targetBeamX = .5;
     beamY = targetBeamY = .47;
@@ -650,7 +781,8 @@
     "W/↑: avanzar por el pasillo\nS/↓: retroceder al caminar\n" +
     "A/D o ←/→: elegir puerta; 1/2/3: elegir directamente\nE o Intro: entrar\n" +
     "Ratón/táctil: pulsar una puerta\nL: encender/apagar linterna\n" +
-    "Mover ratón: dirigir linterna\nV / Retroceso / Supr: volver\nEsc: inicio"
+    "Mover ratón: dirigir linterna\nM: activar/silenciar sonido\n" +
+    "V / Retroceso / Supr: volver\nEsc: inicio"
   );
   document.getElementById("btnExit").onclick = returnToStart;
   updateLoadStatus();
