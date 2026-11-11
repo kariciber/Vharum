@@ -504,19 +504,44 @@
     noise(.075, 240 + Math.random() * 130, .10);
     tone(85, 48, .12, .045);
   }
+  // Crujidos de metal y bisagra: ruido filtrado con roces irregulares.
+  // Evitamos los barridos graves de dientes de sierra que sonaban artificiales.
+  function metalScrape(duration, startHz, endHz, peak) {
+    if (!audioCtx || !audioBus || !noiseBuffer) return;
+    const ctx = audioCtx, at = ctx.currentTime;
+    const source = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    source.buffer = noiseBuffer;
+    filter.type = "bandpass";
+    filter.Q.value = 3.5;
+    filter.frequency.setValueAtTime(startHz, at);
+    filter.frequency.exponentialRampToValueAtTime(endHz, at + duration);
+    gain.gain.setValueAtTime(.0001, at);
+    gain.gain.linearRampToValueAtTime(peak * .42, at + duration * .13);
+    gain.gain.linearRampToValueAtTime(peak, at + duration * .33);
+    gain.gain.linearRampToValueAtTime(peak * .28, at + duration * .58);
+    gain.gain.linearRampToValueAtTime(peak * .68, at + duration * .74);
+    gain.gain.exponentialRampToValueAtTime(.0001, at + duration);
+    source.connect(filter); filter.connect(gain); gain.connect(audioBus);
+    source.start(at); source.stop(at + duration + .01);
+  }
   function playDoor() {
-    tone(150, 56, .57, .058, "sawtooth");
-    noise(.49, 600, .095, "bandpass");
-    tone(92, 60, .15, .045, "triangle");
+    // Bisagra seca, madera vieja rozando y un golpe final breve.
+    metalScrape(.64, 1750, 820, .20);
+    tone(760, 525, .28, .008, "sine");
+    noise(.09, 260, .043);
   }
   function playElevator() {
-    tone(91, 39, .98, .09, "triangle");
-    noise(.84, 410, .11, "bandpass");
-    tone(215, 105, .34, .037, "sawtooth");
+    // Rejilla metálica, vibración corta y cierre mecánico.
+    metalScrape(.73, 1250, 460, .22);
+    tone(440, 310, .43, .018, "triangle");
+    noise(.11, 220, .072);
   }
   function playAmbientCreak() {
-    tone(110 + Math.random() * 55, 46, .78, .014, "triangle");
-    noise(.40, 380, .012, "bandpass");
+    // Algo se mueve a lo lejos: casi un roce, sin trombón grave.
+    metalScrape(.42, 1350 + Math.random() * 370, 700, .044);
+    tone(860, 610, .19, .003, "sine");
   }
   btnSound.addEventListener("click", toggleSound);
   updateSoundButton();
