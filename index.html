@@ -152,12 +152,34 @@
   resize();
 
   // 🖼️ Loader con debug
-  function load(url){
-    return new Promise((resolve,reject)=>{
-      const img=new Image();
-      img.onload=()=>{ console.log("✔", url); resolve(img); };
-      img.onerror=()=>{ console.error("❌", url); reject(url); };
-      img.src=url;
+  // Primero recursos locales; si faltan, usa las mismas imágenes del repositorio.
+  // Un index.html abierto desde el ordenador también puede funcionar con Internet.
+  function load(url) {
+    return new Promise((resolve, reject) => {
+      const remote = "https://raw.githubusercontent.com/kariciber/Vharum/main/" + url;
+      const candidates = window.location.protocol === "file:"
+        ? [remote, url]
+        : [url, remote];
+      const img = new Image();
+      let index = 0;
+      function attempt() {
+        if (index >= candidates.length) {
+          console.error("❌ No se pudo cargar", url, candidates);
+          reject(url);
+          return;
+        }
+        const candidate = candidates[index++];
+        img.onload = () => {
+          console.log("✔ Imagen cargada", candidate);
+          resolve(img);
+        };
+        img.onerror = () => {
+          console.warn("Reintentando imagen desde otra ruta:", candidate);
+          attempt();
+        };
+        img.src = candidate;
+      }
+      attempt();
     });
   }
 
