@@ -127,6 +127,57 @@
     outline:2px solid transparent;
     transform:translate(-50%,-50%) scale(1.08);
   }
+
+  /* Manos: gráficos vectoriales integrados, sin archivos externos */
+  #handsOverlay {
+    position:absolute;
+    inset:auto 0 -2px 0;
+    height:clamp(125px, 29vh, 300px);
+    z-index:6;
+    opacity:0;
+    pointer-events:none;
+    user-select:none;
+    transition:opacity .45s ease;
+    overflow:hidden;
+    filter:drop-shadow(0 -8px 13px rgba(0,0,0,.6));
+  }
+  #handsOverlay.visible { opacity:.88; }
+  #handsOverlay svg {
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .vharum-hand {
+    transform-box:fill-box;
+    transform-origin:50% 85%;
+    will-change:transform;
+  }
+  #handsOverlay.walking .vharum-left {
+    animation:vharumBobLeft .72s ease-in-out infinite alternate;
+  }
+  #handsOverlay.walking .vharum-right {
+    animation:vharumBobRight .72s ease-in-out infinite alternate;
+  }
+  #handsOverlay.interacting .vharum-right {
+    animation:vharumReach .36s ease-out 1 both;
+  }
+  @keyframes vharumBobLeft {
+    from { transform:translateY(2px) rotate(-1deg); }
+    to { transform:translateY(-12px) rotate(2deg); }
+  }
+  @keyframes vharumBobRight {
+    from { transform:translateY(-10px) rotate(1deg); }
+    to { transform:translateY(4px) rotate(-2deg); }
+  }
+  @keyframes vharumReach {
+    0% { transform:translate(0,0) rotate(0); }
+    45% { transform:translate(-48px,-68px) rotate(-8deg); }
+    100% { transform:translate(0,0) rotate(0); }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    #handsOverlay.walking .vharum-hand,
+    #handsOverlay.interacting .vharum-hand { animation:none; }
+  }
   #controls { z-index:12; }
   @media (max-width:620px) {
     #controls { gap:8px; }
@@ -149,6 +200,106 @@
 <div id="gameContainer">
   <canvas id="c"></canvas>
   <div id="hotspots" aria-label="Puntos de interacción"></div>
+  <div id="handsOverlay" aria-hidden="true">
+    <svg viewBox="0 0 1200 340" preserveAspectRatio="none" role="presentation" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="vhSleeve" x1="0" y1="0" x2="1" y2=".7">
+          <stop offset="0" stop-color="#080a0b"/>
+          <stop offset=".5" stop-color="#292b2a"/>
+          <stop offset="1" stop-color="#111313"/>
+        </linearGradient>
+        <linearGradient id="vhSkin" x1=".12" y1=".1" x2=".95" y2=".9">
+          <stop offset="0" stop-color="#b39b83"/>
+          <stop offset=".3" stop-color="#816655"/>
+          <stop offset=".68" stop-color="#5e483c"/>
+          <stop offset="1" stop-color="#302824"/>
+        </linearGradient>
+        <linearGradient id="vhPalm" x1=".15" y1="0" x2=".8" y2="1">
+          <stop offset="0" stop-color="#a78b74"/>
+          <stop offset=".53" stop-color="#6c5345"/>
+          <stop offset="1" stop-color="#342924"/>
+        </linearGradient>
+        <linearGradient id="vhCuff" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#353634"/>
+          <stop offset=".5" stop-color="#171a19"/>
+          <stop offset="1" stop-color="#0a0b0c"/>
+        </linearGradient>
+        <filter id="vhGrain" x="-15%" y="-15%" width="130%" height="130%">
+          <feTurbulence type="fractalNoise" baseFrequency=".24" numOctaves="2" seed="8" result="grain"/>
+          <feColorMatrix in="grain" type="saturate" values="0" result="grey"/>
+          <feComponentTransfer in="grey" result="faint">
+            <feFuncA type="linear" slope=".10"/>
+          </feComponentTransfer>
+          <feBlend in="SourceGraphic" in2="faint" mode="multiply"/>
+        </filter>
+      </defs>
+
+      <!-- Mano izquierda: manga oscura, muñeca y dedos vistos en primera persona -->
+      <g class="vharum-hand vharum-left">
+        <path d="M33 356 C101 290 143 273 190 262 C233 254 268 278 301 315
+                 L319 366 Z" fill="url(#vhSleeve)" stroke="#0e1111" stroke-width="6"/>
+        <path d="M182 258 C206 242 233 233 259 233 C278 249 295 277 303 301
+                 C276 301 235 314 212 334 Z" fill="url(#vhCuff)" stroke="#080909" stroke-width="5"/>
+        <path d="M225 231 C240 211 257 200 279 192
+                 C288 186 297 173 307 169
+                 C319 162 327 173 323 182 L307 207
+                 C316 192 326 163 339 154
+                 C350 147 361 154 358 166 L341 212
+                 C355 178 367 156 381 153
+                 C392 151 399 160 394 171 L373 216
+                 C389 184 401 178 409 181 C420 185 419 196 411 208
+                 L388 250 C377 271 358 283 338 294
+                 C315 303 290 292 265 278
+                 L242 270 Z"
+              fill="url(#vhSkin)" stroke="#291e1a" stroke-width="3" filter="url(#vhGrain)"/>
+        <path d="M244 232 C260 205 286 208 303 222
+                 C315 233 325 241 339 249
+                 C350 257 354 280 342 291
+                 C309 296 284 284 262 274
+                 C247 265 238 252 244 232 Z"
+              fill="url(#vhPalm)" opacity=".85"/>
+        <path d="M306 206 Q319 217 328 230 M339 211 Q348 224 352 232
+                 M374 216 Q382 229 384 235"
+              fill="none" stroke="#342a24" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+        <path d="M269 225 Q287 214 299 222 M286 260 Q311 274 325 269"
+              fill="none" stroke="#c0a089" stroke-width="3" stroke-linecap="round" opacity=".35"/>
+        <path d="M197 253 Q226 240 252 238" fill="none" stroke="#5a5b52" stroke-width="3" opacity=".5"/>
+      </g>
+
+      <!-- Mano derecha independiente: reflejo para mantener perspectiva natural -->
+      <g class="vharum-hand vharum-right">
+        <g transform="translate(1200 0) scale(-1 1)">
+          <path d="M24 362 C96 299 149 275 190 261
+                   C236 256 271 279 300 315 L316 365 Z"
+                fill="url(#vhSleeve)" stroke="#0b0d0d" stroke-width="6"/>
+          <path d="M185 257 C214 237 242 234 267 234
+                   C284 254 302 284 305 301 L228 339 Z"
+                fill="url(#vhCuff)" stroke="#080909" stroke-width="5"/>
+          <path d="M230 237 C245 208 267 196 291 190
+                   C302 184 309 166 320 161
+                   C331 156 339 168 335 181 L316 207
+                   C327 177 342 153 353 151
+                   C365 148 372 158 366 174 L348 214
+                   C362 181 376 156 388 156
+                   C400 159 402 171 395 183 L374 220
+                   C389 195 402 187 413 190
+                   C422 194 422 205 415 217
+                   L392 252 C379 274 351 292 329 294
+                   C302 296 272 285 249 269 Z"
+                fill="url(#vhSkin)" stroke="#2b201b" stroke-width="3" filter="url(#vhGrain)"/>
+          <path d="M246 232 Q275 212 300 220
+                   Q319 231 340 250 Q360 274 343 293
+                   Q294 291 267 274 Q244 264 246 232 Z"
+                fill="url(#vhPalm)" opacity=".88"/>
+          <path d="M315 206 Q326 219 334 231 M349 214 Q356 226 358 232
+                   M377 220 Q384 232 390 236"
+                fill="none" stroke="#352921" stroke-width="3" stroke-linecap="round" opacity=".53"/>
+          <path d="M266 227 Q283 215 302 223 M293 259 Q317 274 335 269"
+                fill="none" stroke="#d0af93" stroke-width="3" stroke-linecap="round" opacity=".33"/>
+        </g>
+      </g>
+    </svg>
+  </div>
 </div>
 
 <div id="controls">
@@ -304,6 +455,7 @@
   };
 
   const spots = document.getElementById("hotspots");
+  const handsOverlay = document.getElementById("handsOverlay");
   const keys = {};
   const minZ = 1, maxZ = 2.2;
   let z = 1;
@@ -392,6 +544,8 @@
   function transitionTo(destination, goingBack = false) {
     if (!running || interacting || !SCENES[destination]) return;
     interacting = true;
+    handsOverlay.classList.remove("walking");
+    handsOverlay.classList.add("interacting");
     fade.style.opacity = "1";
     const from = scene;
     pendingTransition = setTimeout(() => {
@@ -405,6 +559,7 @@
       showSceneHint();
       fade.style.opacity = "0";
       interacting = false;
+      handsOverlay.classList.remove("interacting");
     }, 360);
   }
 
@@ -469,6 +624,10 @@
     previousFrame = t;
     blink(t);
 
+    const walking = !interacting && scene === "corridor" &&
+      (keys["w"] || keys["arrowup"] || keys["s"] || keys["arrowdown"]);
+    handsOverlay.classList.toggle("walking", Boolean(walking));
+
     if (!interacting && scene === "corridor") {
       if (keys["w"] || keys["arrowup"]) z += 0.020 * frames;
       if (keys["s"] || keys["arrowdown"]) z -= 0.020 * frames;
@@ -491,6 +650,9 @@
     }
     interacting = false;
     running = false;
+    handsOverlay.classList.remove("interacting");
+    handsOverlay.classList.remove("walking");
+    handsOverlay.classList.remove("visible");
     fade.style.opacity = "0";
     scene = "corridor";
     history = [];
@@ -510,6 +672,7 @@
     z = 1;
     previousFrame = 0;
     running = true;
+    handsOverlay.classList.add("visible");
     renderHotspots();
     startScreen.classList.add("fadeOut");
     updateLoadStatus();
