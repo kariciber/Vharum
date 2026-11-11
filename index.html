@@ -54,6 +54,7 @@
     border-radius:8px;
     border:1px solid rgba(255,255,255,0.2);
     pointer-events:none;
+    z-index:11;
   }
   #startScreen {
     position:fixed;
@@ -92,6 +93,7 @@
     opacity:0;
     pointer-events:none;
     transition: opacity 0.8s ease;
+    z-index:9;
   }
 </style>
 </head>
@@ -118,7 +120,7 @@
 <div id="fade"></div>
 
 <script>
-(async () => {
+(() => {
 
   // 🔗 ASSETS CORRECTOS SEGÚN TU CARPETA
   const FILES = {
@@ -159,27 +161,52 @@
     });
   }
 
-  let images={};
+  // Los recursos se cargan en segundo plano: el botón Iniciar nunca queda sin respuesta.
+  const images = {};
+  const failedFiles = new Set();
+  let loadedImages = 0;
+  const totalImages = Object.keys(FILES).length;
 
-  try{
-    const entries=Object.entries(FILES);
-    const loaded=await Promise.all(entries.map(([k,v])=>load(v)));
-    entries.forEach(([k],i)=>images[k]=loaded[i]);
-    msg.textContent="Listo - Pulsa iniciar";
-  }catch(err){
-    msg.textContent="❌ Error cargando: "+err;
-    ctx.fillStyle="red";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle="white";
-    ctx.font="20px sans-serif";
-    ctx.fillText("ERROR:",20,40);
-    ctx.fillText(err,20,70);
-    return;
+  function updateLoadStatus() {
+    if (failedFiles.size) {
+      const first = failedFiles.values().next().value;
+      msg.textContent = "Imagen no disponible: " + FILES[first] +
+        ". Comprueba la ruta o recarga la página.";
+    } else if (loadedImages < totalImages) {
+      msg.textContent = "Cargando imágenes " + loadedImages + "/" + totalImages + "...";
+    } else {
+      msg.textContent = running ? "Explora... (W/S para avanzar, E para interactuar)" :
+        "Listo - Pulsa Iniciar";
+    }
   }
 
-  const keys={};
-  window.addEventListener("keydown",e=>keys[e.key]=true);
-  window.addEventListener("keyup",e=>keys[e.key]=false);
+  for (const [key, url] of Object.entries(FILES)) {
+    load(url).then(img => {
+      images[key] = img;
+      loadedImages++;
+      updateLoadStatus();
+    }).catch(() => {
+      failedFiles.add(key);
+      updateLoadStatus();
+    });
+  }
+
+  const keys = {};
+  let interactRequested = false;
+  window.addEventListener("keydown", e => {
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+      e.preventDefault();
+    }
+    keys[e.key] = true;
+    if ((e.key === "e" || e.key === "E") && !e.repeat) {
+      interactRequested = true;
+    }
+  });
+  window.addEventListener("keyup", e => { keys[e.key] = false; });
+  window.addEventListener("blur", () => {
+    Object.keys(keys).forEach(key => { keys[key] = false; });
+    interactRequested = false;
+  });
 
   let z=1, maxZ=2.2, minZ=1;
   let scene=1;
@@ -196,13 +223,24 @@
   }
 
   // 🖼️ Dibujo fiable
-  function drawImageScaled(img,zoom){
-    const w=canvas.width;
-    const h=canvas.height;
-    const s=Math.max(w/img.width,h/img.height)*zoom;
-    const dw=img.width*s;
-    const dh=img.height*s;
-    ctx.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+  function drawImageScaled(img, zoom) {
+    // El contexto ya está escalado por devicePixelRatio en resize().
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (!img || !img.naturalWidth) {
+      ctx.fillStyle = "#09090c";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = failedFiles.size ? "#ffb2b2" : "#f4f4f4";
+      ctx.font = "18px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(failedFiles.size ? "No se pudo cargar el escenario" :
+        "Cargando escenario...", w / 2, h / 2);
+      return;
+    }
+    const s = Math.max(w / img.width, h / img.height) * zoom;
+    const dw = img.width * s;
+    const dh = img.height * s;
+    ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
   }
 
   function loop(t){
@@ -222,21 +260,23 @@
       msg.textContent="Has avanzado...";
     }
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
+    const interactNow = interactRequested && !interacting;
+    interactRequested = false;
     let bg;
 
     if(scene===1){
       bg=useLight?images.bgLight:images.bgDark;
     }else if(scene===2){
       bg=useLight?images.threeDoorsLight:images.threeDoorsDark;
-      if((keys["e"]||keys["E"]) && !interacting) openDoor();
+      if(interactNow) openDoor();
     }else if(scene===3){
       bg=images.doorOpen;
-      if((keys["e"]||keys["E"]) && !interacting) nextScene();
+      if(interactNow) nextScene();
     }else if(scene===4){
       bg=useLight?images.ascensorLight:images.ascensorOpen;
-      if((keys["e"]||keys["E"]) && !interacting) planta2Scene();
+      if(interactNow) planta2Scene();
     }else{
       bg=images.planta2;
     }
@@ -278,17 +318,16 @@
     },1000);
   }
 
-  // 🚀 ARRANQUE FIABLE
-  startBtn.onclick=()=>{
-    console.log("Inicio OK");
+  // El botón se vincula inmediatamente, sin esperar a descargar ninguna imagen.
+  startBtn.onclick = () => {
+    if (running) return;
+    console.log("Inicio Vharum");
     startScreen.classList.add("fadeOut");
-
-    setTimeout(()=>{
-      running=true;
-      requestAnimationFrame(loop);
-      msg.textContent="Explora...";
-    },200);
+    running = true;
+    updateLoadStatus();
+    requestAnimationFrame(loop);
   };
+  updateLoadStatus();
 
   document.getElementById("btnMenu").onclick=()=>alert("Menú próximamente");
   document.getElementById("btnHelp").onclick=()=>alert("WASD / Flechas + E");
