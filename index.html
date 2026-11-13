@@ -54,6 +54,7 @@
     border-radius:8px;
     border:1px solid rgba(255,255,255,0.2);
     pointer-events:none;
+    z-index:11;
   }
   #startScreen {
     position:fixed;
@@ -92,6 +93,164 @@
     opacity:0;
     pointer-events:none;
     transition: opacity 0.8s ease;
+    z-index:9;
+  }
+
+  /* Cámara lateral 2.5D: no representa un giro 360°. */
+  #cameraHelp{position:absolute;bottom:12px;left:12px;z-index:7;pointer-events:none;
+    font:12px system-ui,sans-serif;color:#e8dcca;background:rgba(7,7,8,.69);
+    padding:7px 10px;border-radius:5px;opacity:0;transition:opacity .2s;}
+  #cameraHelp.visible{opacity:1;}
+  #gameContainer canvas{touch-action:none;}
+  @media(max-width:620px){#cameraHelp{font-size:10px;bottom:5px;left:5px;padding:5px 7px;}}
+  #hotspots {
+    position:absolute;
+    inset:0;
+    z-index:5;
+    pointer-events:none;
+  }
+  .hotspot {
+    position:absolute;
+    transform:translate(-50%,-50%);
+    min-width:64px;
+    max-width:36%;
+    padding:9px 13px;
+    border:1px solid rgba(226,213,197,.65);
+    border-radius:999px;
+    background:rgba(8,8,10,.7);
+    color:#f7eee6;
+    font:600 13px system-ui, sans-serif;
+    letter-spacing:.02em;
+    cursor:pointer;
+    pointer-events:auto;
+    touch-action:manipulation;
+    text-shadow:0 1px 2px #000;
+    box-shadow:0 0 18px rgba(0,0,0,.4);
+    transition:background .2s, border-color .2s, transform .2s;
+  }
+  .hotspot:hover, .hotspot.active, .hotspot:focus-visible {
+    background:rgba(73,27,33,.95);
+    border-color:#ffce8c;
+    outline:2px solid transparent;
+    transform:translate(-50%,-50%) scale(1.08);
+  }
+
+  /* Fotografía generada y recortada; dos mitades animadas por separado */
+  #handsOverlay {
+    position:absolute;
+    inset:auto 0 -2px 0;
+    height:clamp(75px,27vh,245px);
+    z-index:6;
+    opacity:0;
+    overflow:hidden;
+    pointer-events:none;
+    user-select:none;
+    transition:opacity .35s ease;
+  }
+  #handsOverlay.visible {opacity:.96;}
+  #handsOverlay img {
+    position:absolute;
+    left:50%;
+    bottom:0;
+    width:min(850px,90vw);
+    height:auto;
+    max-height:100%;
+    transform:translateX(-50%);
+    pointer-events:none;
+    filter:drop-shadow(0 -4px 10px rgba(0,0,0,.35));
+    will-change:transform;
+  }
+  #handsOverlay .vharum-left { clip-path:inset(0 50% 0 0); }
+  #handsOverlay .vharum-right { clip-path:inset(0 0 0 50%); }
+  #handsOverlay.walking .vharum-left {
+    animation:vharumBobLeft .64s ease-in-out infinite alternate;
+  }
+  #handsOverlay.walking .vharum-right {
+    animation:vharumBobRight .64s ease-in-out infinite alternate;
+  }
+  #handsOverlay.interacting .vharum-right {
+    animation:vharumReach .36s ease-out 1 both;
+  }
+  @keyframes vharumBobLeft {
+    from {transform:translate(-50%,2px) rotate(-.6deg);}
+    to {transform:translate(-50%,-8px) rotate(.6deg);}
+  }
+  @keyframes vharumBobRight {
+    from {transform:translate(-50%,-7px) rotate(.6deg);}
+    to {transform:translate(-50%,3px) rotate(-.6deg);}
+  }
+  @keyframes vharumReach {
+    0%,100% {transform:translate(-50%,0);}
+    45% {transform:translate(calc(-50% - 15px),-39px) rotate(-2deg);}
+  }
+  @media (prefers-reduced-motion:reduce) {
+    #handsOverlay.walking img,#handsOverlay.interacting img {animation:none;}
+  }
+
+  #inspectModal[hidden]{display:none;}
+  #inspectModal{position:fixed;inset:0;z-index:24;display:flex;align-items:center;
+    justify-content:center;padding:18px;background:rgba(0,0,0,.77);}
+  #inspectBox{width:min(440px,90vw);max-height:calc(100vh - 85px);overflow:auto;
+    padding:28px 27px 22px;background:linear-gradient(145deg,#25211d,#121110);
+    border:1px solid #7b6b59;color:#e9dcc5;box-shadow:0 15px 55px rgba(0,0,0,.9);
+    border-radius:4px;}
+  #inspectBox h2{margin:0 0 15px;font:600 22px Georgia,serif;color:#e6c69f;}
+  #inspectBox p{font:16px/1.7 Georgia,serif;margin:0;}
+  #inspectClose{display:block;margin:24px auto 0;padding:10px 22px;
+    border:1px solid #ac9575;color:#f9edda;background:#4b342c;border-radius:4px;
+    cursor:pointer;font:600 14px system-ui;}
+  #inspectClose:focus-visible{outline:3px solid #dcb88c;outline-offset:3px;}
+  /* Primer misterio: objetos, cerradura y nota legible sin nuevas imágenes. */
+  #inventory {
+    position:fixed; top:62px; right:12px; z-index:11;
+    padding:8px 12px; border:1px solid rgba(190,158,117,.55);
+    border-radius:7px; background:rgba(13,12,12,.83);
+    color:#ecd5b3; font:600 13px system-ui,sans-serif;
+    opacity:0;pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  #inventory.visible {opacity:1;}
+  .hotspot.locked { border-color:rgba(184,120,102,.8); background:rgba(51,24,23,.78); }
+  #noteModal[hidden] {display:none;}
+  #noteModal {
+    position:fixed;inset:0;z-index:25;
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;background:rgba(0,0,0,.87);
+  }
+  #noteSheet {
+    width:min(450px,90vw);max-height:calc(100vh - 64px);
+    overflow:auto;
+    padding:30px 26px 25px;
+    background:#c8b89c;color:#282016;
+    background-image:linear-gradient(130deg,rgba(74,51,25,.12),transparent 33%,rgba(88,54,37,.16));
+    border:2px solid #85705b;box-shadow:0 16px 48px #000, inset 0 0 30px rgba(79,52,23,.18);
+    transform:rotate(-1.2deg);
+    font-family:Georgia,serif;
+  }
+  #noteSheet h2 {margin:0 0 17px;text-align:center;letter-spacing:.08em;font-size:23px;}
+  #noteSheet p {line-height:1.65;font-size:17px;}
+  #noteSheet small {display:block;margin-top:16px;color:#584739;font-size:13px;}
+  #noteClose {display:block;margin:22px auto 0;padding:10px 22px;border:1px solid #44382c;
+    border-radius:4px;background:#312821;color:#f4e9d8;font:600 14px system-ui;cursor:pointer;}
+  #noteClose:focus-visible {outline:3px solid #a14d29;outline-offset:3px;}
+  @media (max-width:620px){#inventory{top:65px;right:6px;font-size:11px;padding:6px 8px;}
+    #noteSheet{padding:18px 19px;}#noteSheet p{font-size:15px;}}
+  #controls { z-index:12; gap:12px; }
+  #controls #btnLight { background:#25201b; color:#f6e8d6; border:1px solid #66533a; }
+  #controls #btnLight.light-on { background:#574226; color:#fff3cf; border-color:#f6c26d; box-shadow:0 0 14px rgba(255,192,96,.28); }
+  #controls #btnSound { background:#182523; color:#ebf4ed; border:1px solid #446052; }
+  #controls #btnSound.sound-off { background:#242327; color:#c4bfc4; border-color:#49444a; }
+  #controls #btnSound:disabled { opacity:.55;cursor:default; }
+  #controls button:focus-visible {outline:2px solid #fac68e;outline-offset:3px;}
+  @media (max-width:620px) {
+    #controls { gap:8px; }
+    #controls button { font-size:12px; padding:8px 9px; }
+    #controls { gap:5px; padding:0 5px; }
+    #controls #btnLight, #controls #btnSound { white-space:nowrap; font-size:11px; }
+    #controls { gap:4px; }
+    #controls button { padding:7px 7px; }
+    .hotspot { font-size:12px; padding:8px 10px; max-width:30%; }
+    #msg { font-size:13px; }
   }
 </style>
 </head>
@@ -107,29 +266,59 @@
 
 <div id="gameContainer">
   <canvas id="c"></canvas>
+  <div id="hotspots" aria-label="Puntos de interacción"></div>
+  <div id="cameraHelp" aria-live="off">A/D: lateral · ←/→: mirar · C: centrar · arrastrar para mirar</div>
+  <div id="handsOverlay" aria-hidden="true">
+    <img class="vharum-left" alt="" draggable="false">
+    <img class="vharum-right" alt="" draggable="false">
+  </div>
 </div>
 
+<div id="inspectModal" role="dialog" aria-modal="true" aria-labelledby="inspectTitle" hidden>
+  <div id="inspectBox">
+    <h2 id="inspectTitle">Un detalle extraño</h2>
+    <p id="inspectText"></p>
+    <button id="inspectClose" type="button">Seguir explorando (Esc)</button>
+  </div>
+</div>
+<div id="inventory" aria-live="polite" aria-label="Inventario"></div>
+<div id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteTitle" hidden>
+  <div id="noteSheet">
+    <h2 id="noteTitle">REGISTRO · HABITACIÓN 04</h2>
+    <p>Si estás leyendo esto, aún puedes regresar.</p>
+    <p>Dejé la llave oxidada junto a la rejilla. No abras la tercera puerta si oyes tu nombre al otro lado.</p>
+    <p>Y recuerda: aquí nadie conoce tu nombre.</p>
+    <small>Sin firma. La última línea parece escrita recientemente.</small>
+    <button id="noteClose" type="button">Guardar la nota (Esc)</button>
+  </div>
+</div>
 <div id="controls">
-  <button id="btnMenu">Menú</button>
+  <button id="btnMenu">Volver</button>
   <button id="btnHelp">Ayuda</button>
-  <button id="btnExit">Salir</button>
+  <button id="btnLight" type="button" aria-pressed="false" title="Encender linterna (L)">🔦 Linterna: OFF</button>
+  <button id="btnSound" type="button" aria-pressed="true" title="Silenciar sonido (M)">🔊 Sonido: ON</button>
+  <button id="btnExit">Inicio</button>
 </div>
 
 <div id="fade"></div>
 
 <script>
-(async () => {
+(() => {
 
   // 🔗 ASSETS CORRECTOS SEGÚN TU CARPETA
   const FILES = {
     bgDark: "assets/pasillooscuro.png",
     bgLight: "assets/pasilloluz.png",
+    corridorSide: "assets/pasillopuertalateralderechaoscura.png",
+    corridorEnd: "assets/pasillo.png",
     threeDoorsDark: "assets/trespuertasoscuras.png",
     threeDoorsLight: "assets/trespuertasluz.png",
     doorOpen: "assets/habitacioncontunel.png",
     ascensorOpen: "assets/ascensorabiertoplanta2.png",
     ascensorLight: "assets/ascensorabiertoplanta2luz.png",
-    planta2: "assets/planta2.png"
+    planta2: "assets/planta2.png",
+    grate: "assets/habitacionconrejilla.png",
+    exitRoom: "assets/habitacionexit.png"
   };
 
   const startScreen = document.getElementById("startScreen");
@@ -138,6 +327,10 @@
   const fade = document.getElementById("fade");
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
+  const gameContainer = document.getElementById("gameContainer");
+  const cameraHelp = document.getElementById("cameraHelp");
+  const btnLight = document.getElementById("btnLight");
+  const btnSound = document.getElementById("btnSound");
 
   // 📐 Resize fiable
   function resize() {
@@ -150,149 +343,807 @@
   resize();
 
   // 🖼️ Loader con debug
-  function load(url){
-    return new Promise((resolve,reject)=>{
-      const img=new Image();
-      img.onload=()=>{ console.log("✔", url); resolve(img); };
-      img.onerror=()=>{ console.error("❌", url); reject(url); };
-      img.src=url;
+  // Primero recursos locales; si faltan, usa las mismas imágenes del repositorio.
+  // Un index.html abierto desde el ordenador también puede funcionar con Internet.
+  function load(url) {
+    return new Promise((resolve, reject) => {
+      const remote = "https://raw.githubusercontent.com/kariciber/Vharum/main/" + url;
+      const candidates = window.location.protocol === "file:"
+        ? [remote, url]
+        : [url, remote];
+      const img = new Image();
+      let index = 0;
+      function attempt() {
+        if (index >= candidates.length) {
+          console.error("❌ No se pudo cargar", url, candidates);
+          reject(url);
+          return;
+        }
+        const candidate = candidates[index++];
+        img.onload = () => {
+          console.log("✔ Imagen cargada", candidate);
+          resolve(img);
+        };
+        img.onerror = () => {
+          console.warn("Reintentando imagen desde otra ruta:", candidate);
+          attempt();
+        };
+        img.src = candidate;
+      }
+      attempt();
     });
   }
 
-  let images={};
+  // Los recursos se cargan en segundo plano: el botón Iniciar nunca queda sin respuesta.
+  const images = {};
+  const failedFiles = new Set();
+  let loadedImages = 0;
+  const totalImages = Object.keys(FILES).length;
 
-  try{
-    const entries=Object.entries(FILES);
-    const loaded=await Promise.all(entries.map(([k,v])=>load(v)));
-    entries.forEach(([k],i)=>images[k]=loaded[i]);
-    msg.textContent="Listo - Pulsa iniciar";
-  }catch(err){
-    msg.textContent="❌ Error cargando: "+err;
-    ctx.fillStyle="red";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle="white";
-    ctx.font="20px sans-serif";
-    ctx.fillText("ERROR:",20,40);
-    ctx.fillText(err,20,70);
-    return;
+  function updateLoadStatus() {
+    if (failedFiles.size) {
+      const first = failedFiles.values().next().value;
+      msg.textContent = "Imagen no disponible: " + FILES[first] +
+        ". Comprueba la ruta o recarga la página.";
+    } else if (!running) {
+      msg.textContent = loadedImages < totalImages ?
+        "Cargando imágenes " + loadedImages + "/" + totalImages + "..." :
+        "Listo - Pulsa Iniciar";
+    } else {
+      showSceneHint();
+    }
   }
 
-  const keys={};
-  window.addEventListener("keydown",e=>keys[e.key]=true);
-  window.addEventListener("keyup",e=>keys[e.key]=false);
-
-  let z=1, maxZ=2.2, minZ=1;
-  let scene=1;
-  let interacting=false, running=false;
-
-  // ✨ Parpadeo ambiente
-  let useLight=false, nextF=performance.now()+800;
-  function schedule(t){ nextF=t+(700+Math.random()*1800); }
-  function blink(t){
-    if(t<nextF)return;
-    useLight=!useLight;
-    if(useLight)nextF=t+(80+Math.random()*220);
-    else schedule(t);
+  for (const [key, url] of Object.entries(FILES)) {
+    load(url).then(img => {
+      images[key] = img;
+      loadedImages++;
+      updateLoadStatus();
+    }).catch(() => {
+      failedFiles.add(key);
+      updateLoadStatus();
+    });
   }
 
-  // 🖼️ Dibujo fiable
-  function drawImageScaled(img,zoom){
-    const w=canvas.width;
-    const h=canvas.height;
-    const s=Math.max(w/img.width,h/img.height)*zoom;
-    const dw=img.width*s;
-    const dh=img.height*s;
-    ctx.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+  // Fase 1: exploración por puntos sin motor 3D.
+  const SCENES = {
+    corridor: {
+      title: "Pasillo principal · tramo 1 de 3",
+      hint: "W para avanzar. También puedes examinar la puerta encadenada.",
+      dark: "bgDark", light: "bgLight",
+      choices:[
+        {label:"Avanzar",to:"corridorSide",x:50,y:65},
+        {label:"⛓ Examinar cadenas",action:"inspectChains",x:19,y:48}
+      ]
+    },
+    corridorSide:{
+      title:"Pasillo · tramo 2 de 3",
+      hint:"La oscuridad continúa. Hay una puerta a tu derecha.",
+      image:"corridorSide",
+      choices:[
+        {label:"Seguir caminando",to:"corridorEnd",x:50,y:67},
+        {label:"👂 Escuchar puerta",action:"listenDoor",x:78,y:52}
+      ]
+    },
+    corridorEnd:{
+      title:"Pasillo · tramo 3 de 3",
+      hint:"Al fondo se distinguen tres puertas. ¿Qué significan las huellas?",
+      image:"corridorEnd",
+      choices:[
+        {label:"Llegar al cruce",to:"doors",x:50,y:66},
+        {label:"🔍 Examinar el suelo",action:"inspectFloor",x:28,y:75}
+      ]
+    },
+    doors: {
+      title: "Cruce de las tres puertas",
+      hint: "La puerta derecha está cerrada con llave. Investiga antes de abrirla.",
+      dark: "threeDoorsDark", light: "threeDoorsLight",
+      choices: [
+        {label:"Izquierda", to:"grate", x:24, y:60},
+        {label:"Centro", to:"tunnel", x:50, y:60},
+        {label:"Derecha", to:"exitRoom", requiresKey:true, x:76, y:60}
+      ]
+    },
+    grate: {
+      title: "Habitación de la rejilla",
+      hint: "Hay algo extraño junto a la rejilla. Examina los objetos.",
+      image: "grate",
+      choices:[
+        {label:"📜 Leer nota", action:"readNote", x:42, y:52},
+        {label:"🗝 Recoger llave", action:"takeKey", x:63, y:73}
+      ]
+    },
+    tunnel: {
+      title: "Habitación del túnel",
+      hint: "El túnel conduce hacia un ascensor. Pulsa E para seguir.",
+      image: "doorOpen",
+      choices:[{label:"Seguir", to:"lift", x:50, y:60}]
+    },
+    exitRoom: {
+      title: "La salida",
+      hint: "La llave ha abierto la puerta, pero no hay salida. ¿Quién ha cerrado desde fuera?",
+      image: "exitRoom", choices:[]
+    },
+    lift: {
+      title: "Ascensor",
+      hint: "Pulsa E o haz clic para subir a la planta 2.",
+      dark: "ascensorOpen", light: "ascensorLight",
+      choices:[{label:"Planta 2", to:"floor2", x:50, y:65}]
+    },
+    floor2: {
+      title: "Planta 2",
+      hint: "Fin de esta ruta de prueba. Pulsa V o Volver para seguir explorando.",
+      image:"planta2", choices:[]
+    }
+  };
+
+  const spots = document.getElementById("hotspots");
+  const inventory = document.getElementById("inventory");
+  const noteModal = document.getElementById("noteModal");
+  const noteClose = document.getElementById("noteClose");
+  const inspectModal = document.getElementById("inspectModal");
+  const inspectTitle = document.getElementById("inspectTitle");
+  const inspectText = document.getElementById("inspectText");
+  const inspectClose = document.getElementById("inspectClose");
+  let inspectOpen = false;
+  const inspections = {
+    inspectChains:{
+      title:"La puerta encadenada",
+      text:"Las cadenas están cubiertas de polvo, pero el candado parece recién cerrado. Cuando acercas la mano, alguien golpea la madera desde dentro."
+    },
+    listenDoor:{
+      title:"La puerta lateral",
+      text:"Al apoyar el oído, escuchas tres golpes lentos. Después, silencio absoluto. En el marco hay una marca: 04."
+    },
+    inspectFloor:{
+      title:"Huellas en el polvo",
+      text:"Unas huellas descalzas van hacia el cruce. Otras vuelven hacia ti... pero las dos series parecen hechas por la misma persona."
+    }
+  };
+  function showInspection(action) {
+    if (!running || interacting || inspectOpen || noteOpen) return;
+    const clue=inspections[action];
+    if (!clue) return;
+    inspectTitle.textContent=clue.title;
+    inspectText.textContent=clue.text;
+    inspectOpen=true;
+    inspectModal.hidden=false;
+    playAmbientCreak();
+    inspectClose.focus();
+  }
+  function closeInspection() {
+    if (!inspectOpen) return;
+    inspectOpen=false;
+    inspectModal.hidden=true;
+    renderHotspots();
+  }
+  inspectClose.addEventListener("click",closeInspection);
+  let hasKey = false;
+  let noteRead = false;
+  let noteOpen = false;
+  function updateInventory() {
+    inventory.classList.toggle("visible", Boolean(running));
+    inventory.textContent = hasKey ? "🗝 Inventario: llave oxidada" : "🎒 Inventario: vacío";
+  }
+  function getChoices() {
+    return SCENES[scene].choices.filter(choice =>
+      choice.action !== "takeKey" || (noteRead && !hasKey));
+  }
+  function showNote() {
+    if (!running || interacting || noteOpen) return;
+    noteRead = true;
+    noteOpen = true;
+    noteModal.hidden = false;
+    playAmbientCreak();
+    noteClose.focus();
+  }
+  function closeNote() {
+    if (!noteOpen) return;
+    noteOpen = false;
+    noteModal.hidden = true;
+    selected = !hasKey && scene === "grate" ? 1 : 0;
+    renderHotspots();
+  }
+  noteClose.addEventListener("click", closeNote);
+  function performChoice(choice) {
+    if (!running || interacting || noteOpen || inspectOpen || !choice) return;
+    if (inspections[choice.action]) { showInspection(choice.action); return; }
+    if (choice.action === "readNote") { showNote(); return; }
+    if (choice.action === "takeKey") {
+      if (!noteRead || hasKey) return;
+      hasKey = true;
+      selected = 0;
+      tone(720, 950, .18, .055, "sine");
+      updateInventory();
+      renderHotspots();
+      msg.textContent = "🗝 Has recogido una llave oxidada. Quizá abra la puerta derecha.";
+      return;
+    }
+    if (choice.requiresKey && !hasKey) {
+      noise(.14, 700, .055, "bandpass");
+      msg.textContent = "🔒 La puerta derecha está cerrada. Necesitas una llave.";
+      return;
+    }
+    transitionTo(choice.to);
+  }
+  // La luz se dibuja sobre el escenario y debajo de las manos y puntos interactivos.
+  let flashlightOn = false;
+  let beamX = .5, beamY = .47;
+  let targetBeamX = .5, targetBeamY = .47;
+  function setLight(on) {
+    flashlightOn = Boolean(on);
+    btnLight.textContent = flashlightOn ? "🔦 Linterna: ON" : "🔦 Linterna: OFF";
+    btnLight.classList.toggle("light-on", flashlightOn);
+    btnLight.setAttribute("aria-pressed", String(flashlightOn));
+    btnLight.title = flashlightOn ? "Apagar linterna (L)" : "Encender linterna (L)";
+  }
+  function toggleLight() { if (running) setLight(!flashlightOn); }
+  btnLight.addEventListener("click", toggleLight);
+  setLight(false); // Sincroniza el texto y ARIA al cargar la página.
+  gameContainer.addEventListener("pointermove", e => {
+    if (!running) return;
+    const rect = gameContainer.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    targetBeamX = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    targetBeamY = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+  });
+  function drawLighting() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!flashlightOn) {
+      ctx.fillStyle = "rgba(0,0,0,0.27)";
+      ctx.fillRect(0, 0, w, h);
+      return;
+    }
+    const x = beamX * w, y = beamY * h;
+    const r = Math.max(w * .39, h * .8);
+    const dark = ctx.createRadialGradient(x, y, 0, x, y, r);
+    dark.addColorStop(0, "rgba(255,234,195,0.07)");
+    dark.addColorStop(.20, "rgba(255,228,179,0.05)");
+    dark.addColorStop(.46, "rgba(0,0,0,0.17)");
+    dark.addColorStop(.77, "rgba(0,0,0,0.67)");
+    dark.addColorStop(1, "rgba(0,0,0,0.90)");
+    ctx.fillStyle = dark;
+    ctx.fillRect(0, 0, w, h);
   }
 
-  function loop(t){
-    if(!running)return;
+  // Procedural Web Audio: se inicia desde un gesto del jugador.
+  let soundEnabled = true, audioCtx = null, audioBus = null, noiseBuffer = null;
+  let lastFootstepAt = -1000, nextAtmosphereAt = 15000;
+  let nextMusicAt = 0, musicPhraseIndex = 0;
 
+  function updateSoundButton() {
+    btnSound.textContent = soundEnabled ? "🔊 Sonido: ON" : "🔇 Sonido: OFF";
+    btnSound.classList.toggle("sound-off", !soundEnabled);
+    btnSound.setAttribute("aria-pressed", String(soundEnabled));
+    btnSound.title = soundEnabled ? "Silenciar (M)" : "Activar sonido (M)";
+  }
+  function stopAudio() {
+    const previous = audioCtx;
+    audioCtx = null;
+    audioBus = null;
+    noiseBuffer = null;
+    nextMusicAt = 0;
+    if (previous) {
+      try { Promise.resolve(previous.close()).catch(() => {}); }
+      catch (err) { console.warn("No se pudo cerrar el audio:", err); }
+    }
+  }
+  function beginAudio() {
+    if (!soundEnabled || audioCtx) return;
+    const AudioAPI = window.AudioContext || window.webkitAudioContext;
+    if (!AudioAPI) {
+      soundEnabled = false; btnSound.disabled = true;
+      updateSoundButton(); btnSound.title = "Web Audio no disponible";
+      return;
+    }
+    try {
+      const ctx = new AudioAPI();
+      audioCtx = ctx;
+      audioBus = ctx.createGain();
+      audioBus.gain.setValueAtTime(.0001, ctx.currentTime);
+      audioBus.gain.linearRampToValueAtTime(.40, ctx.currentTime + .7);
+      audioBus.connect(ctx.destination);
+      noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.05), ctx.sampleRate);
+      const samples = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < samples.length; i++) samples[i] = (Math.random() * 2 - 1) * .72;
+      const hum = ctx.createOscillator(), humGain = ctx.createGain();
+      hum.type = "sine"; hum.frequency.value = 54;
+      humGain.gain.value = .025;
+      hum.connect(humGain); humGain.connect(audioBus); hum.start();
+      const air = ctx.createBufferSource(), filter = ctx.createBiquadFilter();
+      const airGain = ctx.createGain();
+      air.buffer = noiseBuffer; air.loop = true;
+      filter.type = "lowpass"; filter.frequency.value = 180;
+      airGain.gain.value = .025;
+      air.connect(filter); filter.connect(airGain); airGain.connect(audioBus); air.start();
+      nextMusicAt = performance.now() + 550;
+      if (ctx.state === "suspended") Promise.resolve(ctx.resume()).catch(() => {});
+    } catch (err) {
+      console.warn("Error Web Audio", err);
+      stopAudio(); soundEnabled = false; btnSound.disabled = true; updateSoundButton();
+    }
+  }
+  function toggleSound() {
+    if (!running || btnSound.disabled) return;
+    soundEnabled = !soundEnabled;
+    if (soundEnabled) beginAudio(); else stopAudio();
+    updateSoundButton();
+  }
+  function tone(first, last, duration, volume, shape = "sine") {
+    if (!audioCtx || !audioBus) return;
+    const ctx = audioCtx, time = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = shape;
+    osc.frequency.setValueAtTime(first, time);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20, last), time + duration);
+    gain.gain.setValueAtTime(.0001, time);
+    gain.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), time + Math.min(.03, duration * .25));
+    gain.gain.exponentialRampToValueAtTime(.0001, time + duration);
+    osc.connect(gain); gain.connect(audioBus);
+    osc.start(time); osc.stop(time + duration + .025);
+  }
+  function noise(duration, hz, volume, kind = "lowpass") {
+    if (!audioCtx || !audioBus || !noiseBuffer) return;
+    const ctx = audioCtx, time = ctx.currentTime;
+    const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+    source.buffer = noiseBuffer;
+    filter.type = kind; filter.frequency.value = hz;
+    gain.gain.setValueAtTime(.0001, time);
+    gain.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), time + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, time + duration);
+    source.connect(filter); filter.connect(gain); gain.connect(audioBus);
+    source.start(time); source.stop(time + duration + .015);
+  }
+
+  // Pequeña banda sonora original y sutil. Intervalos lentos, sin archivos MP3.
+  // No tapa los pasos ni los efectos; el botón Sonido/M la silencia por completo.
+  function musicVoice(hertz, when, duration, volume, shape, attack = 1.4) {
+    if (!audioCtx || !audioBus) return;
+    const ctx = audioCtx;
+    const oscillator = ctx.createOscillator();
+    const envelope = ctx.createGain();
+    oscillator.type = shape;
+    oscillator.frequency.setValueAtTime(hertz, when);
+    envelope.gain.setValueAtTime(.0001, when);
+    envelope.gain.linearRampToValueAtTime(volume, when + attack);
+    envelope.gain.setValueAtTime(volume, when + duration * .69);
+    envelope.gain.exponentialRampToValueAtTime(.0001, when + duration);
+    oscillator.connect(envelope);
+    envelope.connect(audioBus);
+    oscillator.start(when);
+    oscillator.stop(when + duration + .02);
+  }
+  function playMusicPhrase() {
+    if (!audioCtx || !audioBus || !soundEnabled) return;
+    const begin = audioCtx.currentTime + .07;
+    // Armonía oscura original: variación lenta en torno a re menor.
+    const chords = [
+      [146.83, 174.61, 220.00],
+      [146.83, 164.81, 220.00],
+      [130.81, 164.81, 196.00],
+      [138.59, 174.61, 220.00]
+    ];
+    const melodies = [
+      [293.66, 261.63, 220.00],
+      [293.66, 329.63, 261.63],
+      [261.63, 220.00, 196.00],
+      [277.18, 261.63, 220.00]
+    ];
+    const phrase = musicPhraseIndex++ % chords.length;
+    chords[phrase].forEach((pitch, i) => {
+      musicVoice(pitch, begin, 14.0, [.018, .010, .007][i],
+        i === 1 ? "triangle" : "sine", 2.6 + i * .25);
+    });
+    const notes = melodies[phrase];
+    notes.forEach((pitch, i) => {
+      musicVoice(pitch, begin + 1.2 + i * 3.65, 2.55,
+        i === 0 ? .016 : .013, "sine", .4);
+    });
+  }
+
+  function playStep() {
+    noise(.075, 240 + Math.random() * 130, .10);
+    tone(85, 48, .12, .045);
+  }
+  // Crujidos de metal y bisagra: ruido filtrado con roces irregulares.
+  // Evitamos los barridos graves de dientes de sierra que sonaban artificiales.
+  function metalScrape(duration, startHz, endHz, peak) {
+    if (!audioCtx || !audioBus || !noiseBuffer) return;
+    const ctx = audioCtx, at = ctx.currentTime;
+    const source = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    source.buffer = noiseBuffer;
+    filter.type = "bandpass";
+    filter.Q.value = 3.5;
+    filter.frequency.setValueAtTime(startHz, at);
+    filter.frequency.exponentialRampToValueAtTime(endHz, at + duration);
+    gain.gain.setValueAtTime(.0001, at);
+    gain.gain.linearRampToValueAtTime(peak * .42, at + duration * .13);
+    gain.gain.linearRampToValueAtTime(peak, at + duration * .33);
+    gain.gain.linearRampToValueAtTime(peak * .28, at + duration * .58);
+    gain.gain.linearRampToValueAtTime(peak * .68, at + duration * .74);
+    gain.gain.exponentialRampToValueAtTime(.0001, at + duration);
+    source.connect(filter); filter.connect(gain); gain.connect(audioBus);
+    source.start(at); source.stop(at + duration + .01);
+  }
+  function playDoor() {
+    // Bisagra seca, madera vieja rozando y un golpe final breve.
+    metalScrape(.64, 1750, 820, .20);
+    tone(760, 525, .28, .008, "sine");
+    noise(.09, 260, .043);
+  }
+  function playElevator() {
+    // Rejilla metálica, vibración corta y cierre mecánico.
+    metalScrape(.73, 1250, 460, .22);
+    tone(440, 310, .43, .018, "triangle");
+    noise(.11, 220, .072);
+  }
+  function playAmbientCreak() {
+    // Algo se mueve a lo lejos: casi un roce, sin trombón grave.
+    metalScrape(.42, 1350 + Math.random() * 370, 700, .044);
+    tone(860, 610, .19, .003, "sine");
+  }
+  btnSound.addEventListener("click", toggleSound);
+  updateSoundButton();
+
+  const handsOverlay = document.getElementById("handsOverlay");
+  // WebP con fondo transparente integrado: funciona incluso al abrir HTML local.
+  const handsData = "data:image/webp;base64,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";
+  handsOverlay.querySelectorAll("img").forEach(img => { img.src = handsData; });
+  const keys = {};
+  // La cámara recorta y desplaza una imagen fija: giro limitado, sin vista trasera.
+  const movableScenes=["corridor","corridorSide","corridorEnd"];
+  let look=0, lookTarget=0, lateral=0, lateralTarget=0, dragging=false, dragX=0;
+  const clampView=v=>Math.max(-1,Math.min(1,v));
+  function centerView(){
+    look=lookTarget=lateral=lateralTarget=0;
+    dragging=false;
+    spots.style.transform="";
+  }
+  gameContainer.addEventListener("pointerdown",e=>{
+    if(!running||interacting||noteOpen||inspectOpen||!movableScenes.includes(scene)||e.target!==canvas)return;
+    dragging=true;dragX=e.clientX;
+    if(gameContainer.setPointerCapture)gameContainer.setPointerCapture(e.pointerId);
+  });
+  gameContainer.addEventListener("pointermove",e=>{
+    if(!dragging||!running||interacting||noteOpen||inspectOpen)return;
+    lookTarget=clampView(lookTarget+(e.clientX-dragX)/Math.max(230,canvas.clientWidth*.36));
+    dragX=e.clientX;
+  });
+  for(const name of ["pointerup","pointercancel","lostpointercapture"]){
+    gameContainer.addEventListener(name,()=>{dragging=false;});
+  }
+  const minZ = 1, maxZ = 2.2;
+  let z = 1;
+  let scene = "corridor";
+  let history = [];
+  let selected = 0;
+  let interacting = false;
+  let running = false;
+  let pendingTransition = null;
+  let previousFrame = 0;
+
+  // Parpadeo breve, sin impedir que la persona explore.
+  let useLight = false;
+  let nextF = performance.now() + 800;
+  function blink(t) {
+    if (t < nextF) return;
+    useLight = !useLight;
+    nextF = t + (useLight ? 80 + Math.random() * 220 :
+      700 + Math.random() * 1800);
+  }
+
+  function showSceneHint() {
+    const current = SCENES[scene];
+    if (!current) return;
+    const available = getChoices();
+    const choice = available.length > 1 ? available[selected] : null;
+    msg.textContent = current.title + " · " + current.hint +
+      (choice ? " · Seleccionada: " + choice.label : "");
+  }
+
+  // El lienzo se dibuja en píxeles CSS; resize() ya configuró la densidad.
+  function drawImageScaled(img, zoom) {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!img || !img.naturalWidth) {
+      ctx.fillStyle = "#09090c";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = failedFiles.size ? "#ffb2b2" : "#f4f4f4";
+      ctx.font = "18px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(failedFiles.size ? "No se pudo cargar el escenario" :
+        "Cargando escenario...", w / 2, h / 2);
+      return;
+    }
+    const movable=movableScenes.includes(scene);
+    const extra=movable?1.04+Math.abs(look)*.52+Math.abs(lateral)*.20:1;
+    const shift=movable?(-look*.21-lateral*.08)*w:0;
+    const s = Math.max(w / img.width, h / img.height) * zoom * extra;
+    const dw = img.width * s, dh = img.height * s;
+    ctx.drawImage(img, (w - dw)/2 + shift, (h - dh)/2, dw, dh);
+  }
+
+  function updateSelected() {
+    const buttons = spots.querySelectorAll("button");
+    buttons.forEach((btn, i) => {
+      const active = i === selected;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", String(active));
+    });
+    if (running) showSceneHint();
+  }
+
+  function renderHotspots() {
+    spots.replaceChildren();
+    getChoices().forEach((choice, i) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "hotspot";
+      button.textContent = choice.requiresKey && !hasKey ? "🔒 " + choice.label : choice.label;
+      button.classList.toggle("locked", Boolean(choice.requiresKey && !hasKey));
+      button.style.left = choice.x + "%";
+      button.style.top = choice.y + "%";
+      button.setAttribute("aria-label", choice.label);
+      button.addEventListener("pointerenter", () => {
+        selected = i;
+        updateSelected();
+      });
+      button.addEventListener("focus", () => {
+        selected = i;
+        updateSelected();
+      });
+      button.addEventListener("click", () => {
+        selected = i;
+        performChoice(choice);
+      });
+      spots.appendChild(button);
+    });
+    updateSelected();
+    showSceneHint();
+  }
+
+  function transitionTo(destination, goingBack = false) {
+    if (!running || interacting || !SCENES[destination]) return;
+    interacting = true;
+    if (!goingBack && scene === "doors") playDoor();
+    else if (!goingBack && scene === "lift") playElevator();
+    else if (!goingBack && scene === "tunnel") playDoor();
+    else if (!goingBack && scene !== "corridor") playAmbientCreak();
+    handsOverlay.classList.remove("walking");
+    handsOverlay.classList.add("interacting");
+    fade.style.opacity = "1";
+    const from = scene;
+    pendingTransition = setTimeout(() => {
+      pendingTransition = null;
+      if (goingBack) history.pop();
+      else history.push(from);
+      scene = destination;
+      centerView();
+      cameraHelp.classList.toggle("visible",movableScenes.includes(scene));
+      z = 1;
+      selected = scene === "doors" ? 1 : 0;
+      renderHotspots();
+      showSceneHint();
+      fade.style.opacity = "0";
+      interacting = false;
+      handsOverlay.classList.remove("interacting");
+    }, 360);
+  }
+
+  function goBack() {
+    if (inspectOpen) { closeInspection(); return; }
+    if (noteOpen) { closeNote(); return; }
+    if (!running || interacting) return;
+    const previous = history[history.length - 1];
+    if (previous) transitionTo(previous, true);
+    else showSceneHint();
+  }
+
+  function activateSelected() {
+    if (!running || interacting) return;
+    const choice = getChoices()[selected];
+    if (choice) performChoice(choice);
+    else showSceneHint();
+  }
+
+  function selectRelative(direction) {
+    const choices = getChoices();
+    if (!running || interacting || choices.length < 2) return;
+    selected = (selected + direction + choices.length) % choices.length;
+    updateSelected();
+  }
+
+  function selectNumber(index) {
+    const choices = getChoices();
+    if (!running || interacting || index < 0 || index >= choices.length) return;
+    selected = index;
+    updateSelected();
+  }
+
+  window.addEventListener("keydown", e => {
+    const key = e.key.toLowerCase();
+    // e.code también permite detectar A, D y E con distintas distribuciones.
+    const isLeft = key === "a" || e.code === "KeyA" || e.key === "ArrowLeft";
+    const isRight = key === "d" || e.code === "KeyD" || e.key === "ArrowRight";
+    const isInteract = key === "e" || e.code === "KeyE" || e.key === "Enter";
+    const isBack = key === "v" || e.code === "KeyV" ||
+      key === "backspace" || e.code === "Backspace" ||
+      key === "delete" || e.code === "Delete";
+    if (running && (isLeft || isRight || isInteract || isBack ||
+      ["ArrowUp","ArrowDown"," "].includes(e.key))) {
+      e.preventDefault();
+    }
+    keys[key] = true;
+    if (e.repeat || !running) return;
+    if (inspectOpen) {
+      if (e.key === "Escape" || isInteract || isBack) {
+        e.preventDefault();
+        closeInspection();
+      }
+      return;
+    }
+    if (noteOpen) {
+      if (e.key === "Escape" || isInteract || isBack) {
+        e.preventDefault();
+        closeNote();
+      }
+      return;
+    }
+    if (key === "l" || e.code === "KeyL") { toggleLight(); return; }
+    if (key === "m" || e.code === "KeyM") { toggleSound(); return; }
+    if (key === "c" || e.code === "KeyC") { centerView(); return; }
+    const inHall=movableScenes.includes(scene);
+    if (isLeft && !inHall) selectRelative(-1);
+    else if (isRight && !inHall) selectRelative(1);
+    else if (/^[123]$/.test(e.key)) selectNumber(Number(e.key) - 1);
+    else if (isInteract) activateSelected();
+    else if (isBack) goBack();
+    else if (e.key === "Escape") returnToStart();
+  });
+  window.addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+  window.addEventListener("blur", () => {
+    Object.keys(keys).forEach(key => { keys[key] = false; });
+    dragging=false;
+  });
+
+  function loop(t) {
+    if (!running) return;
+    const frames = Math.min(2, (t - (previousFrame || t)) / 16.67 || 1);
+    previousFrame = t;
     blink(t);
+    // Suavizado de puntería para que el haz no salte bruscamente.
+    beamX += (targetBeamX - beamX) * Math.min(.26, .13 * frames);
+    beamY += (targetBeamY - beamY) * Math.min(.26, .13 * frames);
 
-    if(!interacting){
-      if(keys["w"]||keys["ArrowUp"]) z+=0.02;
-      if(keys["s"]||keys["ArrowDown"]) z-=0.02;
-      z=Math.max(minZ,Math.min(maxZ,z));
+    const walkingScenes = movableScenes;
+    const freeToMove = !interacting && !inspectOpen && !noteOpen && walkingScenes.includes(scene);
+    if (freeToMove) {
+      if(keys["a"])lateralTarget=clampView(lateralTarget-.020*frames);
+      if(keys["d"])lateralTarget=clampView(lateralTarget+.020*frames);
+      if(keys["arrowleft"])lookTarget=clampView(lookTarget-.018*frames);
+      if(keys["arrowright"])lookTarget=clampView(lookTarget+.018*frames);
+    }
+    const cameraSmooth=Math.min(.34,.18*frames);
+    look+=(lookTarget-look)*cameraSmooth;
+    lateral+=(lateralTarget-lateral)*cameraSmooth;
+    if(walkingScenes.includes(scene)){
+      spots.style.transform="translateX("+((-look*.21-lateral*.08)*canvas.clientWidth)+"px)";
+      cameraHelp.textContent="A/D: lateral · ←/→ o arrastrar: mirar · C: centrar" +
+        (Math.abs(lookTarget)>.92?" · Límite de giro 2.5D":"");
+    }
+    const walking = freeToMove &&
+      (keys["w"] || keys["arrowup"] || keys["s"] || keys["arrowdown"] || keys["a"] || keys["d"]);
+    handsOverlay.classList.toggle("walking", Boolean(walking));
+    if (walking && t - lastFootstepAt >= 390) {
+      playStep();
+      lastFootstepAt = t;
+    }
+    if (t >= nextAtmosphereAt) {
+      playAmbientCreak();
+      nextAtmosphereAt = t + 14000 + Math.random() * 15000;
+    }
+    if (soundEnabled && audioCtx && t >= nextMusicAt) {
+      playMusicPhrase();
+      nextMusicAt = t + 14600;
     }
 
-    if(z>=maxZ && scene===1){
-      scene=2;
-      z=1;
-      msg.textContent="Has avanzado...";
+    if (!interacting && !inspectOpen && !noteOpen && walkingScenes.includes(scene)) {
+      if (keys["w"] || keys["arrowup"]) z += 0.020 * frames;
+      if (keys["s"] || keys["arrowdown"]) z -= 0.020 * frames;
+      z = Math.max(minZ, Math.min(maxZ, z));
+      if (z >= maxZ) {
+        const nextStop={corridor:"corridorSide",corridorSide:"corridorEnd",corridorEnd:"doors"};
+        transitionTo(nextStop[scene]);
+      }
     }
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    let bg;
-
-    if(scene===1){
-      bg=useLight?images.bgLight:images.bgDark;
-    }else if(scene===2){
-      bg=useLight?images.threeDoorsLight:images.threeDoorsDark;
-      if((keys["e"]||keys["E"]) && !interacting) openDoor();
-    }else if(scene===3){
-      bg=images.doorOpen;
-      if((keys["e"]||keys["E"]) && !interacting) nextScene();
-    }else if(scene===4){
-      bg=useLight?images.ascensorLight:images.ascensorOpen;
-      if((keys["e"]||keys["E"]) && !interacting) planta2Scene();
-    }else{
-      bg=images.planta2;
-    }
-
-    drawImageScaled(bg,z);
+    const current = SCENES[scene];
+    const img = images[current.image ||
+      (useLight && current.light ? current.light : current.dark)];
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    drawImageScaled(img, z);
+    drawLighting();
     requestAnimationFrame(loop);
   }
 
-  function openDoor(){
-    interacting=true;
-    fade.style.opacity=1;
-    setTimeout(()=>{
-      fade.style.opacity=0;
-      scene=3;
-      interacting=false;
-      msg.textContent="Puerta abierta";
-    },800);
+  function returnToStart() {
+    if (pendingTransition !== null) {
+      clearTimeout(pendingTransition);
+      pendingTransition = null;
+    }
+    interacting = false;
+    running = false;
+    noteOpen = false;
+    noteModal.hidden = true;
+    inspectOpen = false;
+    inspectModal.hidden = true;
+    noteRead = false;
+    hasKey = false;
+    updateInventory();
+    stopAudio();
+    setLight(false);
+    beamX = targetBeamX = .5;
+    beamY = targetBeamY = .47;
+    handsOverlay.classList.remove("interacting");
+    handsOverlay.classList.remove("walking");
+    handsOverlay.classList.remove("visible");
+    fade.style.opacity = "0";
+    scene = "corridor";
+    history = [];
+    selected = 0;
+    z = 1;
+    previousFrame = 0;
+    spots.replaceChildren();
+    centerView();
+    cameraHelp.classList.remove("visible");
+    startScreen.classList.remove("fadeOut");
+    updateLoadStatus();
   }
 
-  function nextScene(){
-    interacting=true;
-    fade.style.opacity=1;
-    setTimeout(()=>{
-      fade.style.opacity=0;
-      scene=4;
-      interacting=false;
-      msg.textContent="Ascensor...";
-    },800);
-  }
-
-  function planta2Scene(){
-    interacting=true;
-    fade.style.opacity=1;
-    setTimeout(()=>{
-      fade.style.opacity=0;
-      scene=5;
-      interacting=false;
-      msg.textContent="Planta 2";
-    },1000);
-  }
-
-  // 🚀 ARRANQUE FIABLE
-  startBtn.onclick=()=>{
-    console.log("Inicio OK");
+  startBtn.onclick = () => {
+    if (running) return;
+    scene = "corridor";
+    history = [];
+    selected = 0;
+    z = 1;
+    previousFrame = 0;
+    running = true;
+    centerView();
+    cameraHelp.classList.add("visible");
+    hasKey = false;
+    noteRead = false;
+    noteOpen = false;
+    noteModal.hidden = true;
+    inspectOpen = false;
+    inspectModal.hidden = true;
+    updateInventory();
+    musicPhraseIndex = 0;
+    beginAudio();
+    lastFootstepAt = -1000;
+    nextAtmosphereAt = performance.now() + 12000 + Math.random() * 6000;
+    setLight(false);
+    beamX = targetBeamX = .5;
+    beamY = targetBeamY = .47;
+    handsOverlay.classList.add("visible");
+    renderHotspots();
     startScreen.classList.add("fadeOut");
-
-    setTimeout(()=>{
-      running=true;
-      requestAnimationFrame(loop);
-      msg.textContent="Explora...";
-    },200);
+    updateLoadStatus();
+    requestAnimationFrame(loop);
   };
-
-  document.getElementById("btnMenu").onclick=()=>alert("Menú próximamente");
-  document.getElementById("btnHelp").onclick=()=>alert("WASD / Flechas + E");
-  document.getElementById("btnExit").onclick=()=>alert("Salir próximamente");
+  document.getElementById("btnMenu").onclick = goBack;
+  document.getElementById("btnHelp").onclick = () => alert(
+    "VHARUM · Fase de exploración\n" +
+    "W/↑: recorrer tres tramos de pasillo\nS/↓: retroceder dentro del tramo\n" +
+    "En pasillos: A/D lateral; ←/→ mirar; arrastra ratón; C centrar\n" +
+    "En puertas: A/D o ←/→ elegir; 1/2/3 selección directa\nE o Intro: entrar\n" +
+    "Ratón/táctil: pulsar una puerta\nL: encender/apagar linterna\n" +
+    "Mover ratón: dirigir linterna\nM: activar/silenciar sonido\n" +
+    "📜 Lee la nota de la sala de la rejilla y recoge la llave\n" +
+    "V / Retroceso / Supr: volver\nEsc: inicio o cerrar nota"
+  );
+  document.getElementById("btnExit").onclick = returnToStart;
+  updateLoadStatus();
 
 })();
 </script>
