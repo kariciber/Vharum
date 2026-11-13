@@ -180,6 +180,19 @@
     #handsOverlay.walking img,#handsOverlay.interacting img {animation:none;}
   }
 
+  #inspectModal[hidden]{display:none;}
+  #inspectModal{position:fixed;inset:0;z-index:24;display:flex;align-items:center;
+    justify-content:center;padding:18px;background:rgba(0,0,0,.77);}
+  #inspectBox{width:min(440px,90vw);max-height:calc(100vh - 85px);overflow:auto;
+    padding:28px 27px 22px;background:linear-gradient(145deg,#25211d,#121110);
+    border:1px solid #7b6b59;color:#e9dcc5;box-shadow:0 15px 55px rgba(0,0,0,.9);
+    border-radius:4px;}
+  #inspectBox h2{margin:0 0 15px;font:600 22px Georgia,serif;color:#e6c69f;}
+  #inspectBox p{font:16px/1.7 Georgia,serif;margin:0;}
+  #inspectClose{display:block;margin:24px auto 0;padding:10px 22px;
+    border:1px solid #ac9575;color:#f9edda;background:#4b342c;border-radius:4px;
+    cursor:pointer;font:600 14px system-ui;}
+  #inspectClose:focus-visible{outline:3px solid #dcb88c;outline-offset:3px;}
   /* Primer misterio: objetos, cerradura y nota legible sin nuevas imágenes. */
   #inventory {
     position:fixed; top:62px; right:12px; z-index:11;
@@ -253,6 +266,13 @@
   </div>
 </div>
 
+<div id="inspectModal" role="dialog" aria-modal="true" aria-labelledby="inspectTitle" hidden>
+  <div id="inspectBox">
+    <h2 id="inspectTitle">Un detalle extraño</h2>
+    <p id="inspectText"></p>
+    <button id="inspectClose" type="button">Seguir explorando (Esc)</button>
+  </div>
+</div>
 <div id="inventory" aria-live="polite" aria-label="Inventario"></div>
 <div id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteTitle" hidden>
   <div id="noteSheet">
@@ -281,6 +301,8 @@
   const FILES = {
     bgDark: "assets/pasillooscuro.png",
     bgLight: "assets/pasilloluz.png",
+    corridorSide: "assets/pasillopuertalateralderechaoscura.png",
+    corridorEnd: "assets/pasillo.png",
     threeDoorsDark: "assets/trespuertasoscuras.png",
     threeDoorsLight: "assets/trespuertasluz.png",
     doorOpen: "assets/habitacioncontunel.png",
@@ -377,10 +399,31 @@
   // Fase 1: exploración por puntos sin motor 3D.
   const SCENES = {
     corridor: {
-      title: "Pasillo principal",
-      hint: "W o ↑ para avanzar. También puedes pulsar el punto iluminado.",
+      title: "Pasillo principal · tramo 1 de 3",
+      hint: "W para avanzar. También puedes examinar la puerta encadenada.",
       dark: "bgDark", light: "bgLight",
-      choices: [{label:"Avanzar", to:"doors", x:50, y:65}]
+      choices:[
+        {label:"Avanzar",to:"corridorSide",x:50,y:65},
+        {label:"⛓ Examinar cadenas",action:"inspectChains",x:19,y:48}
+      ]
+    },
+    corridorSide:{
+      title:"Pasillo · tramo 2 de 3",
+      hint:"La oscuridad continúa. Hay una puerta a tu derecha.",
+      image:"corridorSide",
+      choices:[
+        {label:"Seguir caminando",to:"corridorEnd",x:50,y:67},
+        {label:"👂 Escuchar puerta",action:"listenDoor",x:78,y:52}
+      ]
+    },
+    corridorEnd:{
+      title:"Pasillo · tramo 3 de 3",
+      hint:"Al fondo se distinguen tres puertas. ¿Qué significan las huellas?",
+      image:"corridorEnd",
+      choices:[
+        {label:"Llegar al cruce",to:"doors",x:50,y:66},
+        {label:"🔍 Examinar el suelo",action:"inspectFloor",x:28,y:75}
+      ]
     },
     doors: {
       title: "Cruce de las tres puertas",
@@ -429,6 +472,43 @@
   const inventory = document.getElementById("inventory");
   const noteModal = document.getElementById("noteModal");
   const noteClose = document.getElementById("noteClose");
+  const inspectModal = document.getElementById("inspectModal");
+  const inspectTitle = document.getElementById("inspectTitle");
+  const inspectText = document.getElementById("inspectText");
+  const inspectClose = document.getElementById("inspectClose");
+  let inspectOpen = false;
+  const inspections = {
+    inspectChains:{
+      title:"La puerta encadenada",
+      text:"Las cadenas están cubiertas de polvo, pero el candado parece recién cerrado. Cuando acercas la mano, alguien golpea la madera desde dentro."
+    },
+    listenDoor:{
+      title:"La puerta lateral",
+      text:"Al apoyar el oído, escuchas tres golpes lentos. Después, silencio absoluto. En el marco hay una marca: 04."
+    },
+    inspectFloor:{
+      title:"Huellas en el polvo",
+      text:"Unas huellas descalzas van hacia el cruce. Otras vuelven hacia ti... pero las dos series parecen hechas por la misma persona."
+    }
+  };
+  function showInspection(action) {
+    if (!running || interacting || inspectOpen || noteOpen) return;
+    const clue=inspections[action];
+    if (!clue) return;
+    inspectTitle.textContent=clue.title;
+    inspectText.textContent=clue.text;
+    inspectOpen=true;
+    inspectModal.hidden=false;
+    playAmbientCreak();
+    inspectClose.focus();
+  }
+  function closeInspection() {
+    if (!inspectOpen) return;
+    inspectOpen=false;
+    inspectModal.hidden=true;
+    renderHotspots();
+  }
+  inspectClose.addEventListener("click",closeInspection);
   let hasKey = false;
   let noteRead = false;
   let noteOpen = false;
@@ -457,7 +537,8 @@
   }
   noteClose.addEventListener("click", closeNote);
   function performChoice(choice) {
-    if (!running || interacting || noteOpen || !choice) return;
+    if (!running || interacting || noteOpen || inspectOpen || !choice) return;
+    if (inspections[choice.action]) { showInspection(choice.action); return; }
     if (choice.action === "readNote") { showNote(); return; }
     if (choice.action === "takeKey") {
       if (!noteRead || hasKey) return;
@@ -815,6 +896,7 @@
   }
 
   function goBack() {
+    if (inspectOpen) { closeInspection(); return; }
     if (noteOpen) { closeNote(); return; }
     if (!running || interacting) return;
     const previous = history[history.length - 1];
@@ -858,6 +940,13 @@
     }
     keys[key] = true;
     if (e.repeat || !running) return;
+    if (inspectOpen) {
+      if (e.key === "Escape" || isInteract || isBack) {
+        e.preventDefault();
+        closeInspection();
+      }
+      return;
+    }
     if (noteOpen) {
       if (e.key === "Escape" || isInteract || isBack) {
         e.preventDefault();
@@ -888,7 +977,9 @@
     beamX += (targetBeamX - beamX) * Math.min(.26, .13 * frames);
     beamY += (targetBeamY - beamY) * Math.min(.26, .13 * frames);
 
-    const walking = !interacting && scene === "corridor" &&
+    const walkingScenes = ["corridor","corridorSide","corridorEnd"];
+    const walking = !interacting && !inspectOpen && !noteOpen &&
+      walkingScenes.includes(scene) &&
       (keys["w"] || keys["arrowup"] || keys["s"] || keys["arrowdown"]);
     handsOverlay.classList.toggle("walking", Boolean(walking));
     if (walking && t - lastFootstepAt >= 390) {
@@ -904,11 +995,14 @@
       nextMusicAt = t + 14600;
     }
 
-    if (!interacting && scene === "corridor") {
+    if (!interacting && !inspectOpen && !noteOpen && walkingScenes.includes(scene)) {
       if (keys["w"] || keys["arrowup"]) z += 0.020 * frames;
       if (keys["s"] || keys["arrowdown"]) z -= 0.020 * frames;
       z = Math.max(minZ, Math.min(maxZ, z));
-      if (z >= maxZ) transitionTo("doors");
+      if (z >= maxZ) {
+        const nextStop={corridor:"corridorSide",corridorSide:"corridorEnd",corridorEnd:"doors"};
+        transitionTo(nextStop[scene]);
+      }
     }
 
     const current = SCENES[scene];
@@ -929,6 +1023,8 @@
     running = false;
     noteOpen = false;
     noteModal.hidden = true;
+    inspectOpen = false;
+    inspectModal.hidden = true;
     noteRead = false;
     hasKey = false;
     updateInventory();
@@ -962,6 +1058,8 @@
     noteRead = false;
     noteOpen = false;
     noteModal.hidden = true;
+    inspectOpen = false;
+    inspectModal.hidden = true;
     updateInventory();
     musicPhraseIndex = 0;
     beginAudio();
@@ -979,7 +1077,7 @@
   document.getElementById("btnMenu").onclick = goBack;
   document.getElementById("btnHelp").onclick = () => alert(
     "VHARUM · Fase de exploración\n" +
-    "W/↑: avanzar por el pasillo\nS/↓: retroceder al caminar\n" +
+    "W/↑: recorrer tres tramos de pasillo\nS/↓: retroceder dentro del tramo\n" +
     "A/D o ←/→: elegir puerta; 1/2/3: elegir directamente\nE o Intro: entrar\n" +
     "Ratón/táctil: pulsar una puerta\nL: encender/apagar linterna\n" +
     "Mover ratón: dirigir linterna\nM: activar/silenciar sonido\n" +
