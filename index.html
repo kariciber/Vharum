@@ -96,6 +96,13 @@
     z-index:9;
   }
 
+  /* Cámara lateral 2.5D: no representa un giro 360°. */
+  #cameraHelp{position:absolute;bottom:12px;left:12px;z-index:7;pointer-events:none;
+    font:12px system-ui,sans-serif;color:#e8dcca;background:rgba(7,7,8,.69);
+    padding:7px 10px;border-radius:5px;opacity:0;transition:opacity .2s;}
+  #cameraHelp.visible{opacity:1;}
+  #gameContainer canvas{touch-action:none;}
+  @media(max-width:620px){#cameraHelp{font-size:10px;bottom:5px;left:5px;padding:5px 7px;}}
   #hotspots {
     position:absolute;
     inset:0;
@@ -260,6 +267,7 @@
 <div id="gameContainer">
   <canvas id="c"></canvas>
   <div id="hotspots" aria-label="Puntos de interacción"></div>
+  <div id="cameraHelp" aria-live="off">A/D: lateral · ←/→: mirar · C: centrar · arrastrar para mirar</div>
   <div id="handsOverlay" aria-hidden="true">
     <img class="vharum-left" alt="" draggable="false">
     <img class="vharum-right" alt="" draggable="false">
@@ -320,6 +328,7 @@
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
   const gameContainer = document.getElementById("gameContainer");
+  const cameraHelp = document.getElementById("cameraHelp");
   const btnLight = document.getElementById("btnLight");
   const btnSound = document.getElementById("btnSound");
 
@@ -783,6 +792,28 @@
   const handsData = "data:image/webp;base64,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";
   handsOverlay.querySelectorAll("img").forEach(img => { img.src = handsData; });
   const keys = {};
+  // La cámara recorta y desplaza una imagen fija: giro limitado, sin vista trasera.
+  const movableScenes=["corridor","corridorSide","corridorEnd"];
+  let look=0, lookTarget=0, lateral=0, lateralTarget=0, dragging=false, dragX=0;
+  const clampView=v=>Math.max(-1,Math.min(1,v));
+  function centerView(){
+    look=lookTarget=lateral=lateralTarget=0;
+    dragging=false;
+    spots.style.transform="";
+  }
+  gameContainer.addEventListener("pointerdown",e=>{
+    if(!running||interacting||noteOpen||inspectOpen||!movableScenes.includes(scene)||e.target!==canvas)return;
+    dragging=true;dragX=e.clientX;
+    if(gameContainer.setPointerCapture)gameContainer.setPointerCapture(e.pointerId);
+  });
+  gameContainer.addEventListener("pointermove",e=>{
+    if(!dragging||!running||interacting||noteOpen||inspectOpen)return;
+    lookTarget=clampView(lookTarget+(e.clientX-dragX)/Math.max(230,canvas.clientWidth*.36));
+    dragX=e.clientX;
+  });
+  for(const name of ["pointerup","pointercancel","lostpointercapture"]){
+    gameContainer.addEventListener(name,()=>{dragging=false;});
+  }
   const minZ = 1, maxZ = 2.2;
   let z = 1;
   let scene = "corridor";
@@ -825,9 +856,12 @@
         "Cargando escenario...", w / 2, h / 2);
       return;
     }
-    const s = Math.max(w / img.width, h / img.height) * zoom;
+    const movable=movableScenes.includes(scene);
+    const extra=movable?1.04+Math.abs(look)*.52+Math.abs(lateral)*.20:1;
+    const shift=movable?(-look*.21-lateral*.08)*w:0;
+    const s = Math.max(w / img.width, h / img.height) * zoom * extra;
     const dw = img.width * s, dh = img.height * s;
-    ctx.drawImage(img, (w - dw)/2, (h - dh)/2, dw, dh);
+    ctx.drawImage(img, (w - dw)/2 + shift, (h - dh)/2, dw, dh);
   }
 
   function updateSelected() {
@@ -885,6 +919,8 @@
       if (goingBack) history.pop();
       else history.push(from);
       scene = destination;
+      centerView();
+      cameraHelp.classList.toggle("visible",movableScenes.includes(scene));
       z = 1;
       selected = scene === "doors" ? 1 : 0;
       renderHotspots();
@@ -956,8 +992,10 @@
     }
     if (key === "l" || e.code === "KeyL") { toggleLight(); return; }
     if (key === "m" || e.code === "KeyM") { toggleSound(); return; }
-    if (isLeft) selectRelative(-1);
-    else if (isRight) selectRelative(1);
+    if (key === "c" || e.code === "KeyC") { centerView(); return; }
+    const inHall=movableScenes.includes(scene);
+    if (isLeft && !inHall) selectRelative(-1);
+    else if (isRight && !inHall) selectRelative(1);
     else if (/^[123]$/.test(e.key)) selectNumber(Number(e.key) - 1);
     else if (isInteract) activateSelected();
     else if (isBack) goBack();
@@ -966,6 +1004,7 @@
   window.addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
   window.addEventListener("blur", () => {
     Object.keys(keys).forEach(key => { keys[key] = false; });
+    dragging=false;
   });
 
   function loop(t) {
@@ -977,10 +1016,24 @@
     beamX += (targetBeamX - beamX) * Math.min(.26, .13 * frames);
     beamY += (targetBeamY - beamY) * Math.min(.26, .13 * frames);
 
-    const walkingScenes = ["corridor","corridorSide","corridorEnd"];
-    const walking = !interacting && !inspectOpen && !noteOpen &&
-      walkingScenes.includes(scene) &&
-      (keys["w"] || keys["arrowup"] || keys["s"] || keys["arrowdown"]);
+    const walkingScenes = movableScenes;
+    const freeToMove = !interacting && !inspectOpen && !noteOpen && walkingScenes.includes(scene);
+    if (freeToMove) {
+      if(keys["a"])lateralTarget=clampView(lateralTarget-.020*frames);
+      if(keys["d"])lateralTarget=clampView(lateralTarget+.020*frames);
+      if(keys["arrowleft"])lookTarget=clampView(lookTarget-.018*frames);
+      if(keys["arrowright"])lookTarget=clampView(lookTarget+.018*frames);
+    }
+    const cameraSmooth=Math.min(.34,.18*frames);
+    look+=(lookTarget-look)*cameraSmooth;
+    lateral+=(lateralTarget-lateral)*cameraSmooth;
+    if(walkingScenes.includes(scene)){
+      spots.style.transform="translateX("+((-look*.21-lateral*.08)*canvas.clientWidth)+"px)";
+      cameraHelp.textContent="A/D: lateral · ←/→ o arrastrar: mirar · C: centrar" +
+        (Math.abs(lookTarget)>.92?" · Límite de giro 2.5D":"");
+    }
+    const walking = freeToMove &&
+      (keys["w"] || keys["arrowup"] || keys["s"] || keys["arrowdown"] || keys["a"] || keys["d"]);
     handsOverlay.classList.toggle("walking", Boolean(walking));
     if (walking && t - lastFootstepAt >= 390) {
       playStep();
@@ -1042,6 +1095,8 @@
     z = 1;
     previousFrame = 0;
     spots.replaceChildren();
+    centerView();
+    cameraHelp.classList.remove("visible");
     startScreen.classList.remove("fadeOut");
     updateLoadStatus();
   }
@@ -1054,6 +1109,8 @@
     z = 1;
     previousFrame = 0;
     running = true;
+    centerView();
+    cameraHelp.classList.add("visible");
     hasKey = false;
     noteRead = false;
     noteOpen = false;
@@ -1078,7 +1135,8 @@
   document.getElementById("btnHelp").onclick = () => alert(
     "VHARUM · Fase de exploración\n" +
     "W/↑: recorrer tres tramos de pasillo\nS/↓: retroceder dentro del tramo\n" +
-    "A/D o ←/→: elegir puerta; 1/2/3: elegir directamente\nE o Intro: entrar\n" +
+    "En pasillos: A/D lateral; ←/→ mirar; arrastra ratón; C centrar\n" +
+    "En puertas: A/D o ←/→ elegir; 1/2/3 selección directa\nE o Intro: entrar\n" +
     "Ratón/táctil: pulsar una puerta\nL: encender/apagar linterna\n" +
     "Mover ratón: dirigir linterna\nM: activar/silenciar sonido\n" +
     "📜 Lee la nota de la sala de la rejilla y recoge la llave\n" +
