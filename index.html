@@ -519,6 +519,7 @@
   // Procedural Web Audio: se inicia desde un gesto del jugador.
   let soundEnabled = true, audioCtx = null, audioBus = null, noiseBuffer = null;
   let lastFootstepAt = -1000, nextAtmosphereAt = 15000;
+  let nextMusicAt = 0, musicPhraseIndex = 0;
 
   function updateSoundButton() {
     btnSound.textContent = soundEnabled ? "🔊 Sonido: ON" : "🔇 Sonido: OFF";
@@ -531,6 +532,7 @@
     audioCtx = null;
     audioBus = null;
     noiseBuffer = null;
+    nextMusicAt = 0;
     if (previous) {
       try { Promise.resolve(previous.close()).catch(() => {}); }
       catch (err) { console.warn("No se pudo cerrar el audio:", err); }
@@ -564,6 +566,7 @@
       filter.type = "lowpass"; filter.frequency.value = 180;
       airGain.gain.value = .025;
       air.connect(filter); filter.connect(airGain); airGain.connect(audioBus); air.start();
+      nextMusicAt = performance.now() + 550;
       if (ctx.state === "suspended") Promise.resolve(ctx.resume()).catch(() => {});
     } catch (err) {
       console.warn("Error Web Audio", err);
@@ -601,6 +604,53 @@
     source.connect(filter); filter.connect(gain); gain.connect(audioBus);
     source.start(time); source.stop(time + duration + .015);
   }
+
+  // Pequeña banda sonora original y sutil. Intervalos lentos, sin archivos MP3.
+  // No tapa los pasos ni los efectos; el botón Sonido/M la silencia por completo.
+  function musicVoice(hertz, when, duration, volume, shape, attack = 1.4) {
+    if (!audioCtx || !audioBus) return;
+    const ctx = audioCtx;
+    const oscillator = ctx.createOscillator();
+    const envelope = ctx.createGain();
+    oscillator.type = shape;
+    oscillator.frequency.setValueAtTime(hertz, when);
+    envelope.gain.setValueAtTime(.0001, when);
+    envelope.gain.linearRampToValueAtTime(volume, when + attack);
+    envelope.gain.setValueAtTime(volume, when + duration * .69);
+    envelope.gain.exponentialRampToValueAtTime(.0001, when + duration);
+    oscillator.connect(envelope);
+    envelope.connect(audioBus);
+    oscillator.start(when);
+    oscillator.stop(when + duration + .02);
+  }
+  function playMusicPhrase() {
+    if (!audioCtx || !audioBus || !soundEnabled) return;
+    const begin = audioCtx.currentTime + .07;
+    // Armonía oscura original: variación lenta en torno a re menor.
+    const chords = [
+      [146.83, 174.61, 220.00],
+      [146.83, 164.81, 220.00],
+      [130.81, 164.81, 196.00],
+      [138.59, 174.61, 220.00]
+    ];
+    const melodies = [
+      [293.66, 261.63, 220.00],
+      [293.66, 329.63, 261.63],
+      [261.63, 220.00, 196.00],
+      [277.18, 261.63, 220.00]
+    ];
+    const phrase = musicPhraseIndex++ % chords.length;
+    chords[phrase].forEach((pitch, i) => {
+      musicVoice(pitch, begin, 14.0, [.018, .010, .007][i],
+        i === 1 ? "triangle" : "sine", 2.6 + i * .25);
+    });
+    const notes = melodies[phrase];
+    notes.forEach((pitch, i) => {
+      musicVoice(pitch, begin + 1.2 + i * 3.65, 2.55,
+        i === 0 ? .016 : .013, "sine", .4);
+    });
+  }
+
   function playStep() {
     noise(.075, 240 + Math.random() * 130, .10);
     tone(85, 48, .12, .045);
@@ -849,6 +899,10 @@
       playAmbientCreak();
       nextAtmosphereAt = t + 14000 + Math.random() * 15000;
     }
+    if (soundEnabled && audioCtx && t >= nextMusicAt) {
+      playMusicPhrase();
+      nextMusicAt = t + 14600;
+    }
 
     if (!interacting && scene === "corridor") {
       if (keys["w"] || keys["arrowup"]) z += 0.020 * frames;
@@ -909,6 +963,7 @@
     noteOpen = false;
     noteModal.hidden = true;
     updateInventory();
+    musicPhraseIndex = 0;
     beginAudio();
     lastFootstepAt = -1000;
     nextAtmosphereAt = performance.now() + 12000 + Math.random() * 6000;
