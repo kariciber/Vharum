@@ -179,6 +179,42 @@
   @media (prefers-reduced-motion:reduce) {
     #handsOverlay.walking img,#handsOverlay.interacting img {animation:none;}
   }
+
+  /* Primer misterio: objetos, cerradura y nota legible sin nuevas imágenes. */
+  #inventory {
+    position:fixed; top:62px; right:12px; z-index:11;
+    padding:8px 12px; border:1px solid rgba(190,158,117,.55);
+    border-radius:7px; background:rgba(13,12,12,.83);
+    color:#ecd5b3; font:600 13px system-ui,sans-serif;
+    opacity:0;pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  #inventory.visible {opacity:1;}
+  .hotspot.locked { border-color:rgba(184,120,102,.8); background:rgba(51,24,23,.78); }
+  #noteModal[hidden] {display:none;}
+  #noteModal {
+    position:fixed;inset:0;z-index:25;
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;background:rgba(0,0,0,.87);
+  }
+  #noteSheet {
+    width:min(450px,90vw);max-height:calc(100vh - 64px);
+    overflow:auto;
+    padding:30px 26px 25px;
+    background:#c8b89c;color:#282016;
+    background-image:linear-gradient(130deg,rgba(74,51,25,.12),transparent 33%,rgba(88,54,37,.16));
+    border:2px solid #85705b;box-shadow:0 16px 48px #000, inset 0 0 30px rgba(79,52,23,.18);
+    transform:rotate(-1.2deg);
+    font-family:Georgia,serif;
+  }
+  #noteSheet h2 {margin:0 0 17px;text-align:center;letter-spacing:.08em;font-size:23px;}
+  #noteSheet p {line-height:1.65;font-size:17px;}
+  #noteSheet small {display:block;margin-top:16px;color:#584739;font-size:13px;}
+  #noteClose {display:block;margin:22px auto 0;padding:10px 22px;border:1px solid #44382c;
+    border-radius:4px;background:#312821;color:#f4e9d8;font:600 14px system-ui;cursor:pointer;}
+  #noteClose:focus-visible {outline:3px solid #a14d29;outline-offset:3px;}
+  @media (max-width:620px){#inventory{top:65px;right:6px;font-size:11px;padding:6px 8px;}
+    #noteSheet{padding:18px 19px;}#noteSheet p{font-size:15px;}}
   #controls { z-index:12; gap:12px; }
   #controls #btnLight { background:#25201b; color:#f6e8d6; border:1px solid #66533a; }
   #controls #btnLight.light-on { background:#574226; color:#fff3cf; border-color:#f6c26d; box-shadow:0 0 14px rgba(255,192,96,.28); }
@@ -217,6 +253,17 @@
   </div>
 </div>
 
+<div id="inventory" aria-live="polite" aria-label="Inventario"></div>
+<div id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteTitle" hidden>
+  <div id="noteSheet">
+    <h2 id="noteTitle">REGISTRO · HABITACIÓN 04</h2>
+    <p>Si estás leyendo esto, aún puedes regresar.</p>
+    <p>Dejé la llave oxidada junto a la rejilla. No abras la tercera puerta si oyes tu nombre al otro lado.</p>
+    <p>Y recuerda: aquí nadie conoce tu nombre.</p>
+    <small>Sin firma. La última línea parece escrita recientemente.</small>
+    <button id="noteClose" type="button">Guardar la nota (Esc)</button>
+  </div>
+</div>
 <div id="controls">
   <button id="btnMenu">Volver</button>
   <button id="btnHelp">Ayuda</button>
@@ -337,18 +384,22 @@
     },
     doors: {
       title: "Cruce de las tres puertas",
-      hint: "Elige una puerta. A/D o ←/→ para seleccionar, E para abrir.",
+      hint: "La puerta derecha está cerrada con llave. Investiga antes de abrirla.",
       dark: "threeDoorsDark", light: "threeDoorsLight",
       choices: [
         {label:"Izquierda", to:"grate", x:24, y:60},
         {label:"Centro", to:"tunnel", x:50, y:60},
-        {label:"Derecha", to:"exitRoom", x:76, y:60}
+        {label:"Derecha", to:"exitRoom", requiresKey:true, x:76, y:60}
       ]
     },
     grate: {
       title: "Habitación de la rejilla",
-      hint: "La rejilla impide continuar por aquí. Pulsa V o el botón Volver.",
-      image: "grate", choices:[]
+      hint: "Hay algo extraño junto a la rejilla. Examina los objetos.",
+      image: "grate",
+      choices:[
+        {label:"📜 Leer nota", action:"readNote", x:42, y:52},
+        {label:"🗝 Recoger llave", action:"takeKey", x:63, y:73}
+      ]
     },
     tunnel: {
       title: "Habitación del túnel",
@@ -358,7 +409,7 @@
     },
     exitRoom: {
       title: "La salida",
-      hint: "Una salida aparente, pero este camino acaba aquí por ahora.",
+      hint: "La llave ha abierto la puerta, pero no hay salida. ¿Quién ha cerrado desde fuera?",
       image: "exitRoom", choices:[]
     },
     lift: {
@@ -375,6 +426,56 @@
   };
 
   const spots = document.getElementById("hotspots");
+  const inventory = document.getElementById("inventory");
+  const noteModal = document.getElementById("noteModal");
+  const noteClose = document.getElementById("noteClose");
+  let hasKey = false;
+  let noteRead = false;
+  let noteOpen = false;
+  function updateInventory() {
+    inventory.classList.toggle("visible", Boolean(running));
+    inventory.textContent = hasKey ? "🗝 Inventario: llave oxidada" : "🎒 Inventario: vacío";
+  }
+  function getChoices() {
+    return SCENES[scene].choices.filter(choice =>
+      choice.action !== "takeKey" || (noteRead && !hasKey));
+  }
+  function showNote() {
+    if (!running || interacting || noteOpen) return;
+    noteRead = true;
+    noteOpen = true;
+    noteModal.hidden = false;
+    playAmbientCreak();
+    noteClose.focus();
+  }
+  function closeNote() {
+    if (!noteOpen) return;
+    noteOpen = false;
+    noteModal.hidden = true;
+    selected = !hasKey && scene === "grate" ? 1 : 0;
+    renderHotspots();
+  }
+  noteClose.addEventListener("click", closeNote);
+  function performChoice(choice) {
+    if (!running || interacting || noteOpen || !choice) return;
+    if (choice.action === "readNote") { showNote(); return; }
+    if (choice.action === "takeKey") {
+      if (!noteRead || hasKey) return;
+      hasKey = true;
+      selected = 0;
+      tone(720, 950, .18, .055, "sine");
+      updateInventory();
+      renderHotspots();
+      msg.textContent = "🗝 Has recogido una llave oxidada. Quizá abra la puerta derecha.";
+      return;
+    }
+    if (choice.requiresKey && !hasKey) {
+      noise(.14, 700, .055, "bandpass");
+      msg.textContent = "🔒 La puerta derecha está cerrada. Necesitas una llave.";
+      return;
+    }
+    transitionTo(choice.to);
+  }
   // La luz se dibuja sobre el escenario y debajo de las manos y puntos interactivos.
   let flashlightOn = false;
   let beamX = .5, beamY = .47;
@@ -574,7 +675,8 @@
   function showSceneHint() {
     const current = SCENES[scene];
     if (!current) return;
-    const choice = current.choices.length > 1 ? current.choices[selected] : null;
+    const available = getChoices();
+    const choice = available.length > 1 ? available[selected] : null;
     msg.textContent = current.title + " · " + current.hint +
       (choice ? " · Seleccionada: " + choice.label : "");
   }
@@ -609,11 +711,12 @@
 
   function renderHotspots() {
     spots.replaceChildren();
-    SCENES[scene].choices.forEach((choice, i) => {
+    getChoices().forEach((choice, i) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "hotspot";
-      button.textContent = choice.label;
+      button.textContent = choice.requiresKey && !hasKey ? "🔒 " + choice.label : choice.label;
+      button.classList.toggle("locked", Boolean(choice.requiresKey && !hasKey));
       button.style.left = choice.x + "%";
       button.style.top = choice.y + "%";
       button.setAttribute("aria-label", choice.label);
@@ -627,7 +730,7 @@
       });
       button.addEventListener("click", () => {
         selected = i;
-        transitionTo(choice.to);
+        performChoice(choice);
       });
       spots.appendChild(button);
     });
@@ -662,6 +765,7 @@
   }
 
   function goBack() {
+    if (noteOpen) { closeNote(); return; }
     if (!running || interacting) return;
     const previous = history[history.length - 1];
     if (previous) transitionTo(previous, true);
@@ -670,20 +774,20 @@
 
   function activateSelected() {
     if (!running || interacting) return;
-    const choice = SCENES[scene].choices[selected];
-    if (choice) transitionTo(choice.to);
+    const choice = getChoices()[selected];
+    if (choice) performChoice(choice);
     else showSceneHint();
   }
 
   function selectRelative(direction) {
-    const choices = SCENES[scene].choices;
+    const choices = getChoices();
     if (!running || interacting || choices.length < 2) return;
     selected = (selected + direction + choices.length) % choices.length;
     updateSelected();
   }
 
   function selectNumber(index) {
-    const choices = SCENES[scene].choices;
+    const choices = getChoices();
     if (!running || interacting || index < 0 || index >= choices.length) return;
     selected = index;
     updateSelected();
@@ -704,6 +808,13 @@
     }
     keys[key] = true;
     if (e.repeat || !running) return;
+    if (noteOpen) {
+      if (e.key === "Escape" || isInteract || isBack) {
+        e.preventDefault();
+        closeNote();
+      }
+      return;
+    }
     if (key === "l" || e.code === "KeyL") { toggleLight(); return; }
     if (key === "m" || e.code === "KeyM") { toggleSound(); return; }
     if (isLeft) selectRelative(-1);
@@ -762,6 +873,11 @@
     }
     interacting = false;
     running = false;
+    noteOpen = false;
+    noteModal.hidden = true;
+    noteRead = false;
+    hasKey = false;
+    updateInventory();
     stopAudio();
     setLight(false);
     beamX = targetBeamX = .5;
@@ -788,6 +904,11 @@
     z = 1;
     previousFrame = 0;
     running = true;
+    hasKey = false;
+    noteRead = false;
+    noteOpen = false;
+    noteModal.hidden = true;
+    updateInventory();
     beginAudio();
     lastFootstepAt = -1000;
     nextAtmosphereAt = performance.now() + 12000 + Math.random() * 6000;
@@ -807,7 +928,8 @@
     "A/D o ←/→: elegir puerta; 1/2/3: elegir directamente\nE o Intro: entrar\n" +
     "Ratón/táctil: pulsar una puerta\nL: encender/apagar linterna\n" +
     "Mover ratón: dirigir linterna\nM: activar/silenciar sonido\n" +
-    "V / Retroceso / Supr: volver\nEsc: inicio"
+    "📜 Lee la nota de la sala de la rejilla y recoge la llave\n" +
+    "V / Retroceso / Supr: volver\nEsc: inicio o cerrar nota"
   );
   document.getElementById("btnExit").onclick = returnToStart;
   updateLoadStatus();
