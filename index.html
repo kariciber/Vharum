@@ -187,6 +187,49 @@
     #handsOverlay.walking img,#handsOverlay.interacting img {animation:none;}
   }
 
+
+  /* HUD y objetos del primer piso */
+  #missionHud{position:fixed;top:65px;left:12px;z-index:11;
+    background:rgba(11,12,14,.82);border:1px solid rgba(183,137,92,.49);
+    border-radius:6px;padding:8px 11px;color:#dfc6a1;font:12px/1.4 system-ui,sans-serif;
+    max-width:min(310px,60vw);opacity:0;pointer-events:none;transition:opacity .25s;}
+  #missionHud.visible{opacity:1;}
+  #missionHud strong{display:block;letter-spacing:.07em;color:#f0d1a2;}
+  #missionHud .task{color:#c4b9a8;}
+  #shadowFigure{position:absolute;left:57%;top:17%;height:55%;width:17%;
+    min-width:100px;max-width:210px;z-index:4;pointer-events:none;
+    opacity:0;transform:translateX(-50%) scale(.76);filter:blur(4px);}
+  #shadowFigure svg{width:100%;height:100%;display:block;}
+  #shadowFigure.visible{animation:vharumShadow 2.1s ease-in-out forwards;}
+  @keyframes vharumShadow{
+    0%{opacity:0;transform:translateX(-50%) translateY(8px) scale(.72);}
+    24%{opacity:.76;transform:translateX(-50%) translateY(0) scale(.81);}
+    65%{opacity:.52;transform:translateX(-40%) translateY(-9px) scale(.87);}
+    100%{opacity:0;transform:translateX(-28%) translateY(-14px) scale(.91);}
+  }
+  #panelModal[hidden],#victoryModal[hidden]{display:none;}
+  #panelModal,#victoryModal{position:fixed;inset:0;z-index:28;
+    background:rgba(0,0,0,.89);display:flex;align-items:center;justify-content:center;padding:18px;}
+  .vharum-box{width:min(470px,92vw);padding:24px 26px;
+    border:1px solid #988364;border-radius:6px;
+    background:linear-gradient(160deg,#28241e,#101113);
+    box-shadow:0 22px 65px #000;color:#e6dcc9;text-align:center;}
+  .vharum-box h2{font:600 23px Georgia,serif;margin:0 0 12px;color:#efd0a3;}
+  .vharum-box p{font:15px/1.55 system-ui,sans-serif;}
+  .vharum-box .codeButtons{display:flex;justify-content:center;gap:10px;margin:22px 0;}
+  .vharum-box button{padding:10px 16px;border:1px solid #8b7960;border-radius:4px;
+    background:#3a3028;color:#ffefd7;cursor:pointer;font:600 15px system-ui;}
+  .vharum-box button:focus-visible{outline:2px solid #edc280;outline-offset:3px;}
+  .vharum-box button[data-code]{font-size:20px;min-width:74px;letter-spacing:.13em;}
+  #panelFeedback{min-height:1.5em;color:#f1be99;}
+  #victoryModal h2{font-size:30px;letter-spacing:.09em;}
+  #victoryModal .victorySuccess{color:#b2d7b2;letter-spacing:.1em;}
+  @media(max-width:620px){#missionHud{top:93px;left:6px;padding:6px 8px;font-size:11px;
+    max-width:65vw;}#shadowFigure{height:46%;width:22%;}
+    .vharum-box{padding:18px;}.vharum-box button[data-code]{min-width:58px;}}
+  @media(prefers-reduced-motion:reduce){
+    #shadowFigure.visible{animation:none;opacity:.48;}
+  }
   #inspectModal[hidden]{display:none;}
   #inspectModal{position:fixed;inset:0;z-index:24;display:flex;align-items:center;
     justify-content:center;padding:18px;background:rgba(0,0,0,.77);}
@@ -268,6 +311,20 @@
   <canvas id="c"></canvas>
   <div id="hotspots" aria-label="Puntos de interacción"></div>
   <div id="cameraHelp" aria-live="off">A/D: lateral · ←/→: mirar · C: centrar · arrastrar para mirar</div>
+  <div id="shadowFigure" aria-hidden="true">
+    <svg viewBox="0 0 160 360" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <defs><radialGradient id="shadowBody" cx="50%" cy="36%" r="63%">
+        <stop offset="0" stop-color="#030407" stop-opacity=".99"/>
+        <stop offset=".74" stop-color="#070a0d" stop-opacity=".83"/>
+        <stop offset="1" stop-color="#070a0d" stop-opacity="0"/>
+      </radialGradient></defs>
+      <ellipse cx="79" cy="66" rx="37" ry="55" fill="url(#shadowBody)"/>
+      <path d="M48 112 Q76 96 107 114 Q135 141 147 207 L153 350 Q77 375 6 351 L12 219 Q25 141 48 112Z"
+        fill="url(#shadowBody)"/>
+      <path d="M39 130 Q5 182 1 286 M118 131 Q158 185 159 286"
+        stroke="#080a0d" stroke-width="19" stroke-linecap="round" fill="none" opacity=".7"/>
+    </svg>
+  </div>
   <div id="handsOverlay" aria-hidden="true">
     <img class="vharum-left" alt="" draggable="false">
     <img class="vharum-right" alt="" draggable="false">
@@ -281,7 +338,32 @@
     <button id="inspectClose" type="button">Seguir explorando (Esc)</button>
   </div>
 </div>
+<div id="missionHud" aria-live="polite"></div>
 <div id="inventory" aria-live="polite" aria-label="Inventario"></div>
+<div id="panelModal" role="dialog" aria-modal="true" aria-labelledby="panelTitle" hidden>
+  <div class="vharum-box">
+    <h2 id="panelTitle">CUADRO ELÉCTRICO</h2>
+    <p>Introduce el número de la habitación donde se interrumpió la corriente.</p>
+    <div class="codeButtons">
+      <button type="button" data-code="13">13</button>
+      <button type="button" data-code="04">04</button>
+      <button type="button" data-code="27">27</button>
+    </div>
+    <p id="panelFeedback" role="status">Busca la pista en el pasillo.</p>
+    <button id="panelClose" type="button">Cerrar cuadro (Esc)</button>
+  </div>
+</div>
+<div id="victoryModal" role="dialog" aria-modal="true" aria-labelledby="victoryTitle" hidden>
+  <div class="vharum-box">
+    <p class="victorySuccess">CAPÍTULO COMPLETADO</p>
+    <h2 id="victoryTitle">PLANTA 1 SUPERADA</h2>
+    <p>Las puertas del ascensor se cierran. En el reflejo del metal, hay una silueta detrás de ti. Te giras y ya no está.</p>
+    <p><strong>Has encontrado la llave, recuperado el fusible y restaurado la corriente.</strong></p>
+    <p>La planta 2 queda preparada para el siguiente capítulo.</p>
+    <button id="victoryClose" type="button">Mirar la planta 2</button>
+    <button id="victoryRestart" type="button">Volver a empezar</button>
+  </div>
+</div>
 <div id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteTitle" hidden>
   <div id="noteSheet">
     <h2 id="noteTitle">REGISTRO · HABITACIÓN 04</h2>
@@ -446,7 +528,7 @@
     },
     grate: {
       title: "Habitación de la rejilla",
-      hint: "Hay algo extraño junto a la rejilla. Examina los objetos.",
+      hint: "La habitación 04 guarda un secreto: una nota y una llave.",
       image: "grate",
       choices:[
         {label:"📜 Leer nota", action:"readNote", x:42, y:52},
@@ -455,24 +537,34 @@
     },
     tunnel: {
       title: "Habitación del túnel",
-      hint: "El túnel conduce hacia un ascensor. Pulsa E para seguir.",
+      hint: "El cuadro eléctrico controla el ascensor. ¿Dónde está el fusible?",
       image: "doorOpen",
-      choices:[{label:"Seguir", to:"lift", x:50, y:60}]
+      choices:[
+        {label:"🔌 Cuadro eléctrico", action:"openPanel", x:75, y:51},
+        {label:"Hacia el ascensor", to:"lift", x:50, y:69}
+      ]
     },
     exitRoom: {
       title: "La salida",
-      hint: "La llave ha abierto la puerta, pero no hay salida. ¿Quién ha cerrado desde fuera?",
-      image: "exitRoom", choices:[]
+      hint: "No es una salida. Hay un armario eléctrico abandonado y un expediente.",
+      image: "exitRoom",
+      choices:[
+        {label:"🔋 Recoger fusible", action:"takeFuse", x:55, y:73},
+        {label:"📂 Leer expediente", action:"readFile", x:26, y:49}
+      ]
     },
     lift: {
       title: "Ascensor",
-      hint: "Pulsa E o haz clic para subir a la planta 2.",
+      hint: "Sin corriente no puedes subir. Revisa el cuadro del túnel.",
       dark: "ascensorOpen", light: "ascensorLight",
-      choices:[{label:"Planta 2", to:"floor2", x:50, y:65}]
+      choices:[
+        {label:"Subir a planta 2", to:"floor2", requiresPower:true, x:50, y:65},
+        {label:"👂 Escuchar motor", action:"listenLift", x:22, y:45}
+      ]
     },
     floor2: {
       title: "Planta 2",
-      hint: "Fin de esta ruta de prueba. Pulsa V o Volver para seguir explorando.",
+      hint: "¡Planta 1 superada! Puedes volver a explorar o regresar a Inicio.",
       image:"planta2", choices:[]
     }
   };
@@ -498,6 +590,14 @@
     inspectFloor:{
       title:"Huellas en el polvo",
       text:"Unas huellas descalzas van hacia el cruce. Otras vuelven hacia ti... pero las dos series parecen hechas por la misma persona."
+    },
+    readFile:{
+      title:"EXPEDIENTE 04 · AVERÍA",
+      text:"Corte de corriente en la habitación 04. Fusible extraído para evitar el uso del ascensor. Acceso al cuadro eléctrico mediante código de habitación. Firmado: Vigilancia nocturna. La tinta está fresca."
+    },
+    listenLift:{
+      title:"El motor del ascensor",
+      text:"La cabina cruje bajo tus pies. Un roce metálico asciende por el hueco, pero el motor necesita electricidad para moverse."
     }
   };
   function showInspection(action) {
@@ -518,16 +618,120 @@
     renderHotspots();
   }
   inspectClose.addEventListener("click",closeInspection);
+
+  const missionHud=document.getElementById("missionHud");
+  const shadowFigure=document.getElementById("shadowFigure");
+  const panelModal=document.getElementById("panelModal");
+  const panelFeedback=document.getElementById("panelFeedback");
+  const panelClose=document.getElementById("panelClose");
+  const victoryModal=document.getElementById("victoryModal");
+  const victoryClose=document.getElementById("victoryClose");
+  const victoryRestart=document.getElementById("victoryRestart");
+  let hasFuse=false, powerRestored=false, panelOpen=false, victoryOpen=false, levelCompleted=false;
+  let shadowSeenSide=false, shadowSeenExit=false;
+  let shadowTimer=null, shadowHideTimer=null;
+
+  function updateMission(){
+    missionHud.classList.toggle("visible",Boolean(running));
+    const count=Number(hasKey)+Number(hasFuse)+Number(powerRestored);
+    const next=!hasKey?"Busca la llave en la habitación de la rejilla" :
+      !hasFuse?"Abre la puerta derecha y busca un fusible" :
+      !powerRestored?"Activa el cuadro eléctrico del túnel" :
+      "Sube al ascensor y llega a la planta 2";
+    missionHud.textContent="PLANTA 1 · "+count+"/3 objetivos · "+next;
+  }
+  function cleanupShadow(){
+    if(shadowTimer!==null){clearTimeout(shadowTimer);shadowTimer=null;}
+    if(shadowHideTimer!==null){clearTimeout(shadowHideTimer);shadowHideTimer=null;}
+    shadowFigure.classList.remove("visible");
+  }
+  function scheduleShadow(place){
+    cleanupShadow();
+    if(place==="corridorSide"&&!shadowSeenSide)shadowSeenSide=true;
+    else if(place==="exitRoom"&&!shadowSeenExit)shadowSeenExit=true;
+    else return;
+    shadowTimer=setTimeout(()=>{
+      shadowTimer=null;
+      if(!running||scene!==place||interacting||noteOpen||inspectOpen)return;
+      shadowFigure.classList.remove("visible");
+      // Reiniciar la animación incluso si ya apareció anteriormente.
+      void shadowFigure.offsetWidth;
+      shadowFigure.classList.add("visible");
+      metalScrape(.32,1050,570,.045);
+      tone(104,78,.31,.02,"sine");
+      shadowHideTimer=setTimeout(()=>{
+        shadowHideTimer=null;
+        shadowFigure.classList.remove("visible");
+      },2150);
+    },950);
+  }
+  function closePanel(){
+    if(!panelOpen)return;
+    panelOpen=false;panelModal.hidden=true;renderHotspots();
+  }
+  function openPanel(){
+    if(!hasFuse){
+      msg.textContent="⚡ El cuadro no tiene fusible. Busca en la habitación cerrada con llave.";
+      noise(.1,470,.05,"bandpass");
+      return;
+    }
+    if(powerRestored){
+      msg.textContent="⚡ El cuadro eléctrico ya funciona. Puedes usar el ascensor.";
+      return;
+    }
+    panelOpen=true;panelModal.hidden=false;
+    panelFeedback.textContent="¿Qué número aparece en las pistas del pasillo?";
+    panelClose.focus();
+  }
+  panelClose.addEventListener("click",closePanel);
+  panelModal.querySelectorAll("button[data-code]").forEach(button=>{
+    button.addEventListener("click",()=>{
+      if(!panelOpen)return;
+      if(button.getAttribute("data-code")!=="04"){
+        panelFeedback.textContent="⛔ Código incorrecto. Revisa el expediente y la puerta lateral.";
+        noise(.12,570,.048,"bandpass");
+        return;
+      }
+      powerRestored=true;
+      tone(320,600,.26,.055,"triangle");
+      playElevator();
+      closePanel();
+      updateMission();
+      msg.textContent="✅ ¡Electricidad restaurada! El ascensor puede llevarte a la planta 2.";
+    });
+  });
+  function closeVictory(){
+    if(!victoryOpen)return;
+    victoryOpen=false;victoryModal.hidden=true;
+  }
+  victoryClose.addEventListener("click",closeVictory);
+  victoryRestart.addEventListener("click",()=>returnToStart());
+  function showVictory(){
+    if(levelCompleted||!powerRestored)return;
+    levelCompleted=true;victoryOpen=true;victoryModal.hidden=false;
+    tone(440,660,.56,.028,"sine");
+    victoryClose.focus();
+  }
+  function resetLevelExtras(){
+    cleanupShadow();
+    hasFuse=false;powerRestored=false;panelOpen=false;victoryOpen=false;levelCompleted=false;
+    shadowSeenSide=false;shadowSeenExit=false;
+    panelModal.hidden=true;victoryModal.hidden=true;
+    updateMission();
+  }
   let hasKey = false;
   let noteRead = false;
   let noteOpen = false;
   function updateInventory() {
     inventory.classList.toggle("visible", Boolean(running));
-    inventory.textContent = hasKey ? "🗝 Inventario: llave oxidada" : "🎒 Inventario: vacío";
+    inventory.textContent = "🎒 Inventario: " +
+      ([hasKey?"🗝 Llave":null,hasFuse?"🔋 Fusible":null].filter(Boolean).join(" · ")||"vacío");
+    updateMission();
   }
   function getChoices() {
     return SCENES[scene].choices.filter(choice =>
-      choice.action !== "takeKey" || (noteRead && !hasKey));
+      (choice.action !== "takeKey" || (noteRead && !hasKey)) &&
+      (choice.action !== "takeFuse" || !hasFuse));
   }
   function showNote() {
     if (!running || interacting || noteOpen) return;
@@ -546,9 +750,20 @@
   }
   noteClose.addEventListener("click", closeNote);
   function performChoice(choice) {
-    if (!running || interacting || noteOpen || inspectOpen || !choice) return;
+    if (!running || interacting || noteOpen || inspectOpen || panelOpen || victoryOpen || !choice) return;
     if (inspections[choice.action]) { showInspection(choice.action); return; }
     if (choice.action === "readNote") { showNote(); return; }
+    if (choice.action === "openPanel") { openPanel(); return; }
+    if (choice.action === "takeFuse") {
+      if(hasFuse)return;
+      hasFuse=true;
+      tone(640,920,.19,.035,"triangle");
+      updateInventory();
+      selected=0;
+      renderHotspots();
+      msg.textContent="🔋 Has encontrado un fusible. Vuelve al cuadro eléctrico del túnel.";
+      return;
+    }
     if (choice.action === "takeKey") {
       if (!noteRead || hasKey) return;
       hasKey = true;
@@ -557,6 +772,11 @@
       updateInventory();
       renderHotspots();
       msg.textContent = "🗝 Has recogido una llave oxidada. Quizá abra la puerta derecha.";
+      return;
+    }
+    if (choice.requiresPower && !powerRestored) {
+      noise(.15,340,.064,"bandpass");
+      msg.textContent="⚡ Ascensor sin electricidad. Necesitas un fusible y activar el cuadro del túnel.";
       return;
     }
     if (choice.requiresKey && !hasKey) {
@@ -880,8 +1100,9 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "hotspot";
-      button.textContent = choice.requiresKey && !hasKey ? "🔒 " + choice.label : choice.label;
-      button.classList.toggle("locked", Boolean(choice.requiresKey && !hasKey));
+      const blocked=(choice.requiresKey&&!hasKey)||(choice.requiresPower&&!powerRestored);
+      button.textContent = blocked ? "🔒 " + choice.label : choice.label;
+      button.classList.toggle("locked",Boolean(blocked));
       button.style.left = choice.x + "%";
       button.style.top = choice.y + "%";
       button.setAttribute("aria-label", choice.label);
@@ -919,6 +1140,8 @@
       if (goingBack) history.pop();
       else history.push(from);
       scene = destination;
+      scheduleShadow(scene);
+      if(scene==="floor2"&&!goingBack)showVictory();
       centerView();
       cameraHelp.classList.toggle("visible",movableScenes.includes(scene));
       z = 1;
@@ -932,6 +1155,8 @@
   }
 
   function goBack() {
+    if (victoryOpen){closeVictory();return;}
+    if (panelOpen){closePanel();return;}
     if (inspectOpen) { closeInspection(); return; }
     if (noteOpen) { closeNote(); return; }
     if (!running || interacting) return;
@@ -976,6 +1201,14 @@
     }
     keys[key] = true;
     if (e.repeat || !running) return;
+    if(panelOpen) {
+      if(e.key==="Escape"||isBack){e.preventDefault();closePanel();}
+      return;
+    }
+    if(victoryOpen) {
+      if(e.key==="Escape"||isInteract||isBack){e.preventDefault();closeVictory();}
+      return;
+    }
     if (inspectOpen) {
       if (e.key === "Escape" || isInteract || isBack) {
         e.preventDefault();
@@ -1017,7 +1250,8 @@
     beamY += (targetBeamY - beamY) * Math.min(.26, .13 * frames);
 
     const walkingScenes = movableScenes;
-    const freeToMove = !interacting && !inspectOpen && !noteOpen && walkingScenes.includes(scene);
+    const freeToMove = !interacting && !inspectOpen && !noteOpen &&
+      !panelOpen && !victoryOpen && walkingScenes.includes(scene);
     if (freeToMove) {
       if(keys["a"])lateralTarget=clampView(lateralTarget-.020*frames);
       if(keys["d"])lateralTarget=clampView(lateralTarget+.020*frames);
@@ -1074,6 +1308,7 @@
     }
     interacting = false;
     running = false;
+    resetLevelExtras();
     noteOpen = false;
     noteModal.hidden = true;
     inspectOpen = false;
@@ -1109,6 +1344,7 @@
     z = 1;
     previousFrame = 0;
     running = true;
+    resetLevelExtras();
     centerView();
     cameraHelp.classList.add("visible");
     hasKey = false;
@@ -1139,7 +1375,8 @@
     "En puertas: A/D o ←/→ elegir; 1/2/3 selección directa\nE o Intro: entrar\n" +
     "Ratón/táctil: pulsar una puerta\nL: encender/apagar linterna\n" +
     "Mover ratón: dirigir linterna\nM: activar/silenciar sonido\n" +
-    "📜 Lee la nota de la sala de la rejilla y recoge la llave\n" +
+    "Objetivo: llave → fusible → cuadro eléctrico (código de las pistas) → ascensor\n" +
+    "Explora las habitaciones para encontrar objetos y pistas\n" +
     "V / Retroceso / Supr: volver\nEsc: inicio o cerrar nota"
   );
   document.getElementById("btnExit").onclick = returnToStart;
