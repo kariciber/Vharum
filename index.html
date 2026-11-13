@@ -102,6 +102,19 @@
     padding:7px 10px;border-radius:5px;opacity:0;transition:opacity .2s;}
   #cameraHelp.visible{opacity:1;}
   #gameContainer canvas{touch-action:none;}
+  #roomControls{position:absolute;bottom:43px;right:16px;z-index:8;display:none;gap:9px;}
+  #roomControls.visible{display:flex;}
+  #roomControls button{background:rgba(20,16,15,.84);border:1px solid #a38a6f;
+    color:#f7e4c6;border-radius:6px;padding:10px 15px;
+    font:600 13px system-ui;cursor:pointer;touch-action:manipulation;}
+  #roomControls button:focus-visible{outline:2px solid #f1c58f;outline-offset:3px;}
+  #progressHall{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+    z-index:7;background:rgba(8,8,9,.7);border-radius:7px;padding:5px 11px;
+    font:600 12px system-ui;letter-spacing:.05em;color:#ccb493;display:none;pointer-events:none;}
+  #progressHall.visible{display:block;}
+  @media(max-width:620px){#roomControls{bottom:35px;right:8px;gap:5px;}
+    #roomControls button{font-size:11px;padding:9px 10px;}
+    #progressHall{bottom:3px;font-size:10px;}}
   @media(max-width:620px){#cameraHelp{font-size:10px;bottom:5px;left:5px;padding:5px 7px;}}
   #hotspots {
     position:absolute;
@@ -311,6 +324,11 @@
   <canvas id="c"></canvas>
   <div id="hotspots" aria-label="Puntos de interacción"></div>
   <div id="cameraHelp" aria-live="off">A/D: lateral · ←/→: mirar · C: centrar · arrastrar para mirar</div>
+  <div id="progressHall" aria-live="off"></div>
+  <div id="roomControls">
+    <button id="btnSearch" type="button" title="Examinar la zona a la que miras (F)">🔍 Buscar (F)</button>
+    <button id="btnTurn" type="button" title="Girar 180° para ver la salida (R)">↩ Girarse (R)</button>
+  </div>
   <div id="shadowFigure" aria-hidden="true">
     <svg viewBox="0 0 160 360" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
       <defs><radialGradient id="shadowBody" cx="50%" cy="36%" r="63%">
@@ -391,6 +409,8 @@
   const FILES = {
     bgDark: "assets/pasillooscuro.png",
     bgLight: "assets/pasilloluz.png",
+    backDoor: "assets/puerta.png",
+    backDoorLit: "assets/puertacerradaconluz.png",
     corridorSide: "assets/pasillopuertalateralderechaoscura.png",
     corridorEnd: "assets/pasillo.png",
     threeDoorsDark: "assets/trespuertasoscuras.png",
@@ -490,31 +510,46 @@
   // Fase 1: exploración por puntos sin motor 3D.
   const SCENES = {
     corridor: {
-      title: "Pasillo principal · tramo 1 de 3",
-      hint: "W para avanzar. También puedes examinar la puerta encadenada.",
-      dark: "bgDark", light: "bgLight",
-      choices:[
-        {label:"Avanzar",to:"corridorSide",x:50,y:65},
-        {label:"⛓ Examinar cadenas",action:"inspectChains",x:19,y:48}
-      ]
+      title:"Pasillo principal · tramo 1 de 6",
+      hint:"Avanza despacio. Las cadenas de una puerta se mueven con el aire.",
+      dark:"bgDark",light:"bgLight",
+      choices:[{label:"Continuar",to:"corridorVestibule",x:51,y:65},
+        {label:"⛓ Examinar cadenas",action:"inspectChains",x:19,y:48}]
+    },
+    corridorVestibule:{
+      title:"Pasillo · tramo 2 de 6",
+      hint:"Una luz tenue parpadea. Algo parece escrito en la pared.",
+      image:"bgLight",
+      choices:[{label:"Continuar",to:"corridorSide",x:51,y:65},
+        {label:"💡 Examinar luces",action:"inspectLamp",x:25,y:35}]
     },
     corridorSide:{
-      title:"Pasillo · tramo 2 de 3",
-      hint:"La oscuridad continúa. Hay una puerta a tu derecha.",
+      title:"Pasillo · tramo 3 de 6",
+      hint:"Una puerta lateral queda a tu derecha. Se oyen tres golpes.",
       image:"corridorSide",
-      choices:[
-        {label:"Seguir caminando",to:"corridorEnd",x:50,y:67},
-        {label:"👂 Escuchar puerta",action:"listenDoor",x:78,y:52}
-      ]
+      choices:[{label:"Continuar",to:"corridorLanding",x:51,y:65},
+        {label:"👂 Escuchar puerta",action:"listenDoor",x:78,y:52}]
+    },
+    corridorLanding:{
+      title:"Pasillo · tramo 4 de 6",
+      hint:"La oscuridad se hace más espesa. Hay arañazos en el muro.",
+      image:"bgDark",
+      choices:[{label:"Continuar",to:"corridorStorage",x:51,y:65},
+        {label:"🔎 Mirar arañazos",action:"inspectScratches",x:72,y:51}]
+    },
+    corridorStorage:{
+      title:"Pasillo · tramo 5 de 6",
+      hint:"Un armario oxidado cruje al otro lado del pasillo.",
+      image:"corridorSide",
+      choices:[{label:"Continuar",to:"corridorEnd",x:51,y:65},
+        {label:"🗃 Investigar armario",action:"inspectLocker",x:25,y:55}]
     },
     corridorEnd:{
-      title:"Pasillo · tramo 3 de 3",
-      hint:"Al fondo se distinguen tres puertas. ¿Qué significan las huellas?",
+      title:"Pasillo · tramo 6 de 6",
+      hint:"Aparecen huellas descalzas y un cruce con tres puertas.",
       image:"corridorEnd",
-      choices:[
-        {label:"Llegar al cruce",to:"doors",x:50,y:66},
-        {label:"🔍 Examinar el suelo",action:"inspectFloor",x:28,y:75}
-      ]
+      choices:[{label:"Llegar al cruce",to:"doors",x:51,y:65},
+        {label:"🔍 Examinar suelo",action:"inspectFloor",x:28,y:75}]
     },
     doors: {
       title: "Cruce de las tres puertas",
@@ -573,6 +608,80 @@
   const inventory = document.getElementById("inventory");
   const noteModal = document.getElementById("noteModal");
   const noteClose = document.getElementById("noteClose");
+  const btnTurn=document.getElementById("btnTurn");
+  const btnSearch=document.getElementById("btnSearch");
+  const roomControls=document.getElementById("roomControls");
+  const progressHall=document.getElementById("progressHall");
+  const corridorSequence=["corridor","corridorVestibule","corridorSide","corridorLanding","corridorStorage","corridorEnd"];
+  const roomScenes=["grate","tunnel","exitRoom","lift"];
+  let facingBack=false, foundKey=false, foundFuse=false;
+  let searchedZones=new Set();
+  function updateExplorationUI(){
+    const inRoom=Boolean(running&&roomScenes.includes(scene));
+    const inHall=Boolean(running&&corridorSequence.includes(scene));
+    roomControls.classList.toggle("visible",inRoom);
+    btnTurn.textContent=facingBack?"↪ Mirar dentro (R)":"↩ Girarse (R)";
+    btnSearch.disabled=!inRoom||facingBack;
+    progressHall.classList.toggle("visible",inHall);
+    cameraHelp.classList.toggle("visible",inRoom||inHall);
+  }
+  function turnRoom(){
+    if(!running||!roomScenes.includes(scene)||interacting||panelOpen||noteOpen||inspectOpen||victoryOpen)return;
+    facingBack=!facingBack;
+    centerView();
+    z=1;
+    playAmbientCreak();
+    selected=0;
+    renderHotspots();
+    updateExplorationUI();
+  }
+  function leaveRoom(){
+    if(!roomScenes.includes(scene)||!facingBack)return;
+    const previous=history[history.length-1];
+    if(previous)transitionTo(previous,true);
+  }
+  const roomSearch = {
+    grate:{
+      left:{title:"Viejo escritorio",text:"En los cajones solo hay papeles quemados. Una nota rota menciona la habitación 04."},
+      center:{title:"La rejilla",text:"El hierro está frío. Ves marcas recientes de algo que intentó empujar desde dentro."},
+      right:{title:"Detrás de la rejilla",text:"Buscas junto al borde de metal y encuentras una llave oxidada escondida bajo el polvo.",revealKey:true}
+    },
+    tunnel:{
+      left:{title:"Etiqueta del mantenimiento",text:"Una etiqueta dice: CORTE ELÉCTRICO · HABITACIÓN 04. Alguien ha tachado el nombre del técnico."},
+      center:{title:"Tuberías del túnel",text:"Golpeas el metal. El eco responde con tres golpes, cuando tú solo has dado dos."},
+      right:{title:"Cuadro del túnel",text:"El compartimento del fusible está vacío. Hay que encontrar uno antes de restablecer la corriente."}
+    },
+    exitRoom:{
+      left:{title:"Monitor antiguo",text:"Una pantalla apagada refleja un rostro que desaparece al mover la linterna. Debajo hay un expediente con el número 04."},
+      center:{title:"Puerta falsa",text:"La puerta no conduce a ninguna salida. Alguien grabó la palabra NO VUELVAS en la madera."},
+      right:{title:"Armario de herramientas",text:"Abres el armario oxidado. En el fondo encuentras un fusible intacto entre cables viejos.",revealFuse:true}
+    },
+    lift:{
+      left:{title:"Hueco del ascensor",text:"Se escucha algo arrastrarse por el hueco. No hay nadie cuando iluminas la pared."},
+      center:{title:"Botonera",text:"Un único botón permanece operativo, pero hace falta devolver la corriente al circuito."},
+      right:{title:"Espejo rajado",text:"En el espejo ves tu silueta y, durante un instante, otra más alta a tu espalda."}
+    }
+  };
+  function searchCurrentArea(){
+    if(!running||interacting||!roomScenes.includes(scene)||noteOpen||inspectOpen||panelOpen||victoryOpen)return;
+    if(facingBack){msg.textContent="Estás mirando hacia la salida. Pulsa R para examinar la habitación.";return;}
+    const zone=lookTarget<-.32?"left":lookTarget>.32?"right":"center";
+    const data=roomSearch[scene][zone];
+    if(!data)return;
+    const key=scene+":"+zone;
+    if(searchedZones.has(key)){
+      msg.textContent="🔍 Ya examinaste esa zona. Mira hacia otro rincón (←/→) y busca otra vez.";
+      return;
+    }
+    searchedZones.add(key);
+    if(data.revealKey)foundKey=true;
+    if(data.revealFuse)foundFuse=true;
+    inspections.currentSearch={title:data.title,text:data.text};
+    showInspection("currentSearch");
+    playAmbientCreak();
+  }
+  btnTurn.addEventListener("click",turnRoom);
+  btnSearch.addEventListener("click",searchCurrentArea);
   const inspectModal = document.getElementById("inspectModal");
   const inspectTitle = document.getElementById("inspectTitle");
   const inspectText = document.getElementById("inspectText");
@@ -591,6 +700,9 @@
       title:"Huellas en el polvo",
       text:"Unas huellas descalzas van hacia el cruce. Otras vuelven hacia ti... pero las dos series parecen hechas por la misma persona."
     },
+    inspectLamp:{title:"Luz defectuosa",text:"Entre dos parpadeos ves escrito en la pared: 04. Al volver a mirar, solo queda una mancha de humedad."},
+    inspectScratches:{title:"Marcas en la pared",text:"Cuatro arañazos profundos dibujan una flecha hacia el final del pasillo. Un quinto atraviesa los demás."},
+    inspectLocker:{title:"Armario oxidado",text:"Abres la puerta del armario. Solo hay una bata húmeda y un ruido de respiración que se detiene cuando tú dejas de respirar."},
     readFile:{
       title:"EXPEDIENTE 04 · AVERÍA",
       text:"Corte de corriente en la habitación 04. Fusible extraído para evitar el uso del ascensor. Acceso al cuadro eléctrico mediante código de habitación. Firmado: Vigilancia nocturna. La tinta está fresca."
@@ -729,9 +841,14 @@
     updateMission();
   }
   function getChoices() {
-    return SCENES[scene].choices.filter(choice =>
-      (choice.action !== "takeKey" || (noteRead && !hasKey)) &&
-      (choice.action !== "takeFuse" || !hasFuse));
+    if(roomScenes.includes(scene)&&facingBack)
+      return [{label:"🚪 Salir de la habitación",action:"leaveRoom",x:50,y:62}];
+    const choices=SCENES[scene].choices.filter(choice=>
+      (choice.action!=="takeKey"||(noteRead&&foundKey&&!hasKey)) &&
+      (choice.action!=="takeFuse"||(foundFuse&&!hasFuse)));
+    if(roomScenes.includes(scene))choices.push(
+      {label:"🔍 Buscar por aquí",action:"searchRoom",x:54,y:83});
+    return choices;
   }
   function showNote() {
     if (!running || interacting || noteOpen) return;
@@ -745,7 +862,7 @@
     if (!noteOpen) return;
     noteOpen = false;
     noteModal.hidden = true;
-    selected = !hasKey && scene === "grate" ? 1 : 0;
+    selected = !hasKey && foundKey && scene === "grate" ? 1 : 0;
     renderHotspots();
   }
   noteClose.addEventListener("click", closeNote);
@@ -754,6 +871,8 @@
     if (inspections[choice.action]) { showInspection(choice.action); return; }
     if (choice.action === "readNote") { showNote(); return; }
     if (choice.action === "openPanel") { openPanel(); return; }
+    if (choice.action === "leaveRoom") { leaveRoom(); return; }
+    if (choice.action === "searchRoom") { searchCurrentArea(); return; }
     if (choice.action === "takeFuse") {
       if(hasFuse)return;
       hasFuse=true;
@@ -1013,7 +1132,7 @@
   handsOverlay.querySelectorAll("img").forEach(img => { img.src = handsData; });
   const keys = {};
   // La cámara recorta y desplaza una imagen fija: giro limitado, sin vista trasera.
-  const movableScenes=["corridor","corridorSide","corridorEnd"];
+  const movableScenes=[...corridorSequence,...roomScenes];
   let look=0, lookTarget=0, lateral=0, lateralTarget=0, dragging=false, dragX=0;
   const clampView=v=>Math.max(-1,Math.min(1,v));
   function centerView(){
@@ -1059,7 +1178,11 @@
     if (!current) return;
     const available = getChoices();
     const choice = available.length > 1 ? available[selected] : null;
-    msg.textContent = current.title + " · " + current.hint +
+    const viewHint=roomScenes.includes(scene)?(
+      facingBack?" · Miras la puerta de salida. E o W para salir; R para girarte.":
+      " · ←/→: mirar rincones; F: buscar; R: darse la vuelta."
+    ):"";
+    msg.textContent = current.title + " · " + current.hint + viewHint +
       (choice ? " · Seleccionada: " + choice.label : "");
   }
 
@@ -1140,11 +1263,12 @@
       if (goingBack) history.pop();
       else history.push(from);
       scene = destination;
+      facingBack=false;
       scheduleShadow(scene);
       if(scene==="floor2"&&!goingBack)showVictory();
       centerView();
-      cameraHelp.classList.toggle("visible",movableScenes.includes(scene));
       z = 1;
+      updateExplorationUI();
       selected = scene === "doors" ? 1 : 0;
       renderHotspots();
       showSceneHint();
@@ -1226,6 +1350,8 @@
     if (key === "l" || e.code === "KeyL") { toggleLight(); return; }
     if (key === "m" || e.code === "KeyM") { toggleSound(); return; }
     if (key === "c" || e.code === "KeyC") { centerView(); return; }
+    if (key === "r" || e.code === "KeyR") { turnRoom(); return; }
+    if (key === "f" || e.code === "KeyF") { searchCurrentArea(); return; }
     const inHall=movableScenes.includes(scene);
     if (isLeft && !inHall) selectRelative(-1);
     else if (isRight && !inHall) selectRelative(1);
@@ -1249,9 +1375,9 @@
     beamX += (targetBeamX - beamX) * Math.min(.26, .13 * frames);
     beamY += (targetBeamY - beamY) * Math.min(.26, .13 * frames);
 
-    const walkingScenes = movableScenes;
-    const freeToMove = !interacting && !inspectOpen && !noteOpen &&
-      !panelOpen && !victoryOpen && walkingScenes.includes(scene);
+    const walkingScenes=movableScenes;
+    const freeToMove=!interacting&&!inspectOpen&&!noteOpen&&!panelOpen&&!victoryOpen &&
+      movableScenes.includes(scene);
     if (freeToMove) {
       if(keys["a"])lateralTarget=clampView(lateralTarget-.020*frames);
       if(keys["d"])lateralTarget=clampView(lateralTarget+.020*frames);
@@ -1266,8 +1392,8 @@
       cameraHelp.textContent="A/D: lateral · ←/→ o arrastrar: mirar · C: centrar" +
         (Math.abs(lookTarget)>.92?" · Límite de giro 2.5D":"");
     }
-    const walking = freeToMove &&
-      (keys["w"] || keys["arrowup"] || keys["s"] || keys["arrowdown"] || keys["a"] || keys["d"]);
+    const walking=freeToMove &&
+      (keys["w"]||keys["arrowup"]||keys["s"]||keys["arrowdown"]||keys["a"]||keys["d"]);
     handsOverlay.classList.toggle("walking", Boolean(walking));
     if (walking && t - lastFootstepAt >= 390) {
       playStep();
@@ -1282,19 +1408,28 @@
       nextMusicAt = t + 14600;
     }
 
-    if (!interacting && !inspectOpen && !noteOpen && walkingScenes.includes(scene)) {
-      if (keys["w"] || keys["arrowup"]) z += 0.020 * frames;
-      if (keys["s"] || keys["arrowdown"]) z -= 0.020 * frames;
-      z = Math.max(minZ, Math.min(maxZ, z));
-      if (z >= maxZ) {
-        const nextStop={corridor:"corridorSide",corridorSide:"corridorEnd",corridorEnd:"doors"};
-        transitionTo(nextStop[scene]);
+    if (freeToMove && corridorSequence.includes(scene)) {
+      if (keys["w"]||keys["arrowup"]) z+=.0026*frames;
+      if (keys["s"]||keys["arrowdown"]) z-=.0026*frames;
+      z=Math.max(1,Math.min(1.52,z));
+      progressHall.textContent="PASILLO · TRAMO "+(corridorSequence.indexOf(scene)+1)+"/6 · "+
+        Math.round((corridorSequence.indexOf(scene)+(z-1)/.52)/6*100)+"%";
+      if(z>=1.52){
+        const next=corridorSequence[corridorSequence.indexOf(scene)+1]||"doors";
+        transitionTo(next);
       }
+    }else if(freeToMove && roomScenes.includes(scene)){
+      if(keys["w"]||keys["arrowup"])z+=.0045*frames;
+      if(keys["s"]||keys["arrowdown"])z-=.0045*frames;
+      z=Math.max(1,Math.min(1.36,z));
+      if(facingBack&&z>=1.36)leaveRoom();
     }
 
     const current = SCENES[scene];
-    const img = images[current.image ||
-      (useLight && current.light ? current.light : current.dark)];
+    const imgKey=roomScenes.includes(scene)&&facingBack ?
+      (scene==="exitRoom"?"backDoorLit":"backDoor") :
+      (current.image||(useLight&&current.light?current.light:current.dark));
+    const img=images[imgKey];
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
     drawImageScaled(img, z);
     drawLighting();
@@ -1315,6 +1450,9 @@
     inspectModal.hidden = true;
     noteRead = false;
     hasKey = false;
+    facingBack=false;foundKey=false;foundFuse=false;
+    searchedZones.clear();
+    updateExplorationUI();
     updateInventory();
     stopAudio();
     setLight(false);
@@ -1353,6 +1491,9 @@
     noteModal.hidden = true;
     inspectOpen = false;
     inspectModal.hidden = true;
+    facingBack=false;foundKey=false;foundFuse=false;
+    searchedZones.clear();
+    updateExplorationUI();
     updateInventory();
     musicPhraseIndex = 0;
     beginAudio();
@@ -1370,8 +1511,10 @@
   document.getElementById("btnMenu").onclick = goBack;
   document.getElementById("btnHelp").onclick = () => alert(
     "VHARUM · Fase de exploración\n" +
-    "W/↑: recorrer tres tramos de pasillo\nS/↓: retroceder dentro del tramo\n" +
-    "En pasillos: A/D lateral; ←/→ mirar; arrastra ratón; C centrar\n" +
+    "W/↑: avanzar por seis tramos del pasillo o acercarte en las salas\nS/↓: retroceder\n" +
+    "A/D: desplazarte lateralmente; ←/→: mirar; C: centrar cámara\n" +
+    "En habitaciones: F buscar en la zona que miras; R girarte 180°\n" +
+    "Mirando la puerta de salida: E o W para volver al pasillo\n" +
     "En puertas: A/D o ←/→ elegir; 1/2/3 selección directa\nE o Intro: entrar\n" +
     "Ratón/táctil: pulsar una puerta\nL: encender/apagar linterna\n" +
     "Mover ratón: dirigir linterna\nM: activar/silenciar sonido\n" +
